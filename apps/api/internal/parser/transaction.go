@@ -1,7 +1,9 @@
 package parser
 
-// Transaction holds all fields for a single bank statement entry.
-type Transaction struct {
+// ParsedTransaction is the raw, unnormalized output of the PDF parser.
+// Fields are strings because parsing preserves the source representation;
+// conversion to domain types happens in the service layer.
+type ParsedTransaction struct {
 	AccountID               string
 	Date                    string
 	BankReferenceNumber     string
