@@ -12,6 +12,8 @@ type Deps struct {
 	System      *service.System
 	Statement   *service.Statement
 	Transaction *service.Transaction
+	Merchant    *service.Merchant
+	Report      *service.Report
 }
 
 // NewRouter builds the HTTP handler graph for the API.
@@ -26,6 +28,16 @@ func NewRouter(d Deps) http.Handler {
 
 	transaction := &handler.Transaction{Service: d.Transaction}
 	mux.HandleFunc("GET /transactions", transaction.List)
+
+	merchant := &handler.Merchant{Service: d.Merchant}
+	mux.HandleFunc("GET /merchants/top", merchant.TopIdentifiers)
+	mux.HandleFunc("POST /merchants", merchant.Upsert)
+
+	report := &handler.Report{Service: d.Report}
+	mux.HandleFunc("GET /reports/spend-by-primary-tag", report.SpendByPrimaryTag)
+	mux.HandleFunc("GET /reports/spend-by-secondary-tag", report.SpendBySecondaryTag)
+	mux.HandleFunc("GET /reports/merchants-by-month", report.MerchantsByMonth)
+	mux.HandleFunc("GET /reports/daily-spend", report.DailySpend)
 
 	return mux
 }

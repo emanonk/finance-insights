@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -19,14 +18,9 @@ import (
 	"github.com/manoskammas/finance-insights/apps/api/internal/repository"
 )
 
-// statementWriter persists a single statement row inside the given tx.
-type statementWriter interface {
-	Insert(ctx context.Context, tx pgx.Tx, s repository.Statement) error
-}
-
 // transactionWriter bulk-persists transactions inside the given tx.
 type transactionWriter interface {
-	InsertBatch(ctx context.Context, tx pgx.Tx, statementID uuid.UUID, txs []repository.Transaction) error
+	InsertBatch(ctx context.Context, tx pgx.Tx, txs []repository.Transaction) error
 }
 
 // pdfParser parses a PDF file on disk into ParsedTransactions.
@@ -35,11 +29,10 @@ type pdfParser interface {
 }
 
 // Statement orchestrates statement ingest: save the upload, parse it,
-// and persist the statement and its transactions atomically.
+// and persist the transactions atomically.
 type Statement struct {
 	pool       *pgxpool.Pool
 	parser     pdfParser
-	statements statementWriter
 	txs        transactionWriter
 	storageDir string
 }
@@ -48,14 +41,12 @@ type Statement struct {
 func NewStatement(
 	pool *pgxpool.Pool,
 	p pdfParser,
-	statements statementWriter,
 	txs transactionWriter,
 	storageDir string,
 ) *Statement {
 	return &Statement{
 		pool:       pool,
 		parser:     p,
-		statements: statements,
 		txs:        txs,
 		storageDir: storageDir,
 	}
@@ -63,20 +54,15 @@ func NewStatement(
 
 // IngestResult is returned to clients after a successful upload.
 type IngestResult struct {
-	StatementID      uuid.UUID
 	FileName         string
 	TransactionCount int
 }
 
-// Ingest saves the uploaded PDF to disk, parses it, and persists the
-// statement along with all parsed transactions in a single DB transaction.
-func (s *Statement) Ingest(ctx context.Context, fileName string, r io.Reader) (IngestResult, error) {
-	id, err := uuid.NewV7()
-	if err != nil {
-		return IngestResult{}, fmt.Errorf("generate id: %w", err)
-	}
-
-	storedPath, err := s.saveToDisk(id, r)
+// Ingest saves the uploaded PDF to disk, parses it, and persists all parsed
+// transactions in a single DB transaction. accountID must be a valid FK into
+// the accounts table — the caller is responsible for resolving it.
+func (s *Statement) Ingest(ctx context.Context, accountID int64, fileName string, r io.Reader) (IngestResult, error) {
+	storedPath, err := s.saveToDisk(fileName, r)
 	if err != nil {
 		return IngestResult{}, err
 	}
@@ -87,38 +73,32 @@ func (s *Statement) Ingest(ctx context.Context, fileName string, r io.Reader) (I
 		return IngestResult{}, fmt.Errorf("parse statement: %w", err)
 	}
 
-	domainTxs, err := toDomainTransactions(id, parsed)
+	domainTxs, err := toDomainTransactions(accountID, fileName, parsed)
 	if err != nil {
 		_ = os.Remove(storedPath)
 		return IngestResult{}, fmt.Errorf("normalize transactions: %w", err)
 	}
 
-	stmt := repository.Statement{
-		ID:         id,
-		FileName:   fileName,
-		StoredPath: storedPath,
-		UploadedAt: time.Now().UTC(),
-	}
-
-	if err := s.persist(ctx, stmt, domainTxs); err != nil {
+	if err := s.persist(ctx, domainTxs); err != nil {
 		_ = os.Remove(storedPath)
 		return IngestResult{}, err
 	}
 
 	return IngestResult{
-		StatementID:      id,
 		FileName:         fileName,
 		TransactionCount: len(domainTxs),
 	}, nil
 }
 
-func (s *Statement) saveToDisk(id uuid.UUID, r io.Reader) (string, error) {
+func (s *Statement) saveToDisk(fileName string, r io.Reader) (string, error) {
 	dir := filepath.Join(s.storageDir, "statements")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", fmt.Errorf("create storage dir: %w", err)
 	}
 
-	path := filepath.Join(dir, id.String()+".pdf")
+	// Use a timestamped name to avoid collisions with identically-named files.
+	safeName := fmt.Sprintf("%d_%s", time.Now().UnixNano(), filepath.Base(fileName))
+	path := filepath.Join(dir, safeName)
 	f, err := os.Create(path)
 	if err != nil {
 		return "", fmt.Errorf("create storage file: %w", err)
@@ -132,17 +112,14 @@ func (s *Statement) saveToDisk(id uuid.UUID, r io.Reader) (string, error) {
 	return path, nil
 }
 
-func (s *Statement) persist(ctx context.Context, stmt repository.Statement, txs []repository.Transaction) error {
+func (s *Statement) persist(ctx context.Context, txs []repository.Transaction) error {
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	if err := s.statements.Insert(ctx, tx, stmt); err != nil {
-		return err
-	}
-	if err := s.txs.InsertBatch(ctx, tx, stmt.ID, txs); err != nil {
+	if err := s.txs.InsertBatch(ctx, tx, txs); err != nil {
 		return err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -154,7 +131,7 @@ func (s *Statement) persist(ctx context.Context, stmt repository.Statement, txs 
 // toDomainTransactions converts parser output into repository-layer rows.
 // Transactions that lack a required field (date, direction, amount, description)
 // are skipped rather than failing the whole upload; malformed values fail fast.
-func toDomainTransactions(statementID uuid.UUID, parsed []parser.ParsedTransaction) ([]repository.Transaction, error) {
+func toDomainTransactions(accountID int64, fileName string, parsed []parser.ParsedTransaction) ([]repository.Transaction, error) {
 	out := make([]repository.Transaction, 0, len(parsed))
 	for i, p := range parsed {
 		if strings.TrimSpace(p.Date) == "" ||
@@ -173,25 +150,28 @@ func toDomainTransactions(statementID uuid.UUID, parsed []parser.ParsedTransacti
 			return nil, fmt.Errorf("transaction #%d amount %q: %w", i, p.Amount, err)
 		}
 
-		id, err := uuid.NewV7()
-		if err != nil {
-			return nil, fmt.Errorf("generate transaction id: %w", err)
-		}
-
+		desc := p.Description
 		t := repository.Transaction{
-			ID:                  id,
-			StatementID:         statementID,
-			AccountID:           nullableString(p.AccountID),
+			AccountID:           accountID,
 			Date:                date,
+			BankReferenceNumber: nullableString(p.BankReferenceNumber),
+			Justification:       nullableString(p.Justification),
+			Indicator:           nullableString(p.Indicator),
 			MerchantIdentifier:  nullableString(p.MerchantIdentifier),
-			Description:         p.Description,
-			Direction:           p.Direction,
-			Amount:              amount,
 			MCCCode:             nullableString(p.MCCCode),
 			CardMasked:          nullableString(p.CardMasked),
 			Reference:           nullableString(p.Reference),
-			BankReferenceNumber: nullableString(p.BankReferenceNumber),
+			Description:         &desc,
 			PaymentMethod:       nullableString(p.PaymentMethod),
+			Direction:           p.Direction,
+			Amount:              amount,
+			StatementFileName:   &fileName,
+		}
+
+		if a1, ok, err := optionalAmount(p.Amount1); err != nil {
+			return nil, fmt.Errorf("transaction #%d amount1 %q: %w", i, p.Amount1, err)
+		} else if ok {
+			t.Amount1 = &a1
 		}
 
 		if balance, ok, err := optionalAmount(p.BalanceAfterTransaction); err != nil {

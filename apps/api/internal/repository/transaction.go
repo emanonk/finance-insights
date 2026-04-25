@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -20,11 +19,10 @@ func NewTransactionRepository(pool *pgxpool.Pool) *TransactionRepository {
 }
 
 // InsertBatch bulk-inserts the given transactions inside the supplied pg transaction.
-// All rows are associated with the provided statementID.
+// The database generates the id for each row automatically.
 func (r *TransactionRepository) InsertBatch(
 	ctx context.Context,
 	tx pgx.Tx,
-	statementID uuid.UUID,
 	txs []Transaction,
 ) error {
 	if len(txs) == 0 {
@@ -32,29 +30,31 @@ func (r *TransactionRepository) InsertBatch(
 	}
 
 	columns := []string{
-		"id", "statement_id", "account_id", "date", "merchant_identifier",
-		"description", "direction", "amount", "balance_after_transaction",
-		"mcc_code", "card_masked", "reference", "bank_reference_number",
-		"payment_method",
+		"account_id", "date", "bank_reference_number", "justification",
+		"indicator", "merchant_identifier", "amount1", "mcc_code",
+		"card_masked", "reference", "description", "payment_method",
+		"direction", "amount", "balance_after_transaction", "statement_file_name",
 	}
 
 	rows := make([][]any, len(txs))
 	for i, t := range txs {
 		rows[i] = []any{
-			t.ID,
-			statementID,
 			t.AccountID,
 			t.Date,
+			t.BankReferenceNumber,
+			t.Justification,
+			t.Indicator,
 			t.MerchantIdentifier,
-			t.Description,
-			t.Direction,
-			t.Amount,
-			t.BalanceAfterTransaction,
+			t.Amount1,
 			t.MCCCode,
 			t.CardMasked,
 			t.Reference,
-			t.BankReferenceNumber,
+			t.Description,
 			t.PaymentMethod,
+			t.Direction,
+			t.Amount,
+			t.BalanceAfterTransaction,
+			t.StatementFileName,
 		}
 	}
 
@@ -71,20 +71,22 @@ func (r *TransactionRepository) List(ctx context.Context, limit, offset int) ([]
 	rows, err := r.pool.Query(ctx, `
         SELECT
             id,
-            statement_id,
             account_id,
             date,
+            bank_reference_number,
+            justification,
+            indicator,
             merchant_identifier,
-            description,
-            direction,
-            amount::text,
-            balance_after_transaction::text,
+            amount1::text,
             mcc_code,
             card_masked,
             reference,
-            bank_reference_number,
+            description,
             payment_method,
-            created_at,
+            direction,
+            amount::text,
+            balance_after_transaction::text,
+            statement_file_name,
             COUNT(*) OVER() AS total
         FROM transactions
         ORDER BY date DESC, id DESC
@@ -100,31 +102,29 @@ func (r *TransactionRepository) List(ctx context.Context, limit, offset int) ([]
 		total int
 	)
 	for rows.Next() {
-		var (
-			t       Transaction
-			balance *string
-		)
+		var t Transaction
 		if err := rows.Scan(
 			&t.ID,
-			&t.StatementID,
 			&t.AccountID,
 			&t.Date,
+			&t.BankReferenceNumber,
+			&t.Justification,
+			&t.Indicator,
 			&t.MerchantIdentifier,
-			&t.Description,
-			&t.Direction,
-			&t.Amount,
-			&balance,
+			&t.Amount1,
 			&t.MCCCode,
 			&t.CardMasked,
 			&t.Reference,
-			&t.BankReferenceNumber,
+			&t.Description,
 			&t.PaymentMethod,
-			&t.CreatedAt,
+			&t.Direction,
+			&t.Amount,
+			&t.BalanceAfterTransaction,
+			&t.StatementFileName,
 			&total,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan transaction: %w", err)
 		}
-		t.BalanceAfterTransaction = balance
 		out = append(out, t)
 	}
 	if err := rows.Err(); err != nil {

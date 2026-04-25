@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/manoskammas/finance-insights/apps/api/internal/service"
@@ -15,11 +16,12 @@ import (
 const (
 	maxStatementUploadBytes = 25 << 20 // 25 MiB
 	statementFormField      = "file"
+	accountIDFormField      = "account_id"
 )
 
 // statementIngester is the subset of service.Statement used by the handler.
 type statementIngester interface {
-	Ingest(ctx context.Context, fileName string, r io.Reader) (service.IngestResult, error)
+	Ingest(ctx context.Context, accountID int64, fileName string, r io.Reader) (service.IngestResult, error)
 }
 
 // Statement serves the statement upload endpoint.
@@ -29,12 +31,15 @@ type Statement struct {
 
 // statementCreateResponse is the transport payload returned on successful upload.
 type statementCreateResponse struct {
-	ID               string `json:"id"`
 	FileName         string `json:"fileName"`
 	TransactionCount int    `json:"transactionCount"`
 }
 
 // Create handles POST /statements.
+//
+// Required form fields:
+//   - file       — the PDF bank statement (multipart)
+//   - account_id — integer FK referencing the target account
 func (h *Statement) Create(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxStatementUploadBytes)
 
@@ -45,6 +50,17 @@ func (h *Statement) Create(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeError(w, http.StatusBadRequest, "invalid multipart form")
+		return
+	}
+
+	rawAccountID := r.FormValue(accountIDFormField)
+	if rawAccountID == "" {
+		writeError(w, http.StatusBadRequest, "missing account_id field")
+		return
+	}
+	accountID, err := strconv.ParseInt(rawAccountID, 10, 64)
+	if err != nil || accountID <= 0 {
+		writeError(w, http.StatusBadRequest, "account_id must be a positive integer")
 		return
 	}
 
@@ -60,7 +76,7 @@ func (h *Statement) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.Service.Ingest(r.Context(), header.Filename, file)
+	result, err := h.Service.Ingest(r.Context(), accountID, header.Filename, file)
 	if err != nil {
 		slog.Error("statement ingest", "err", err, "file", header.Filename)
 		writeError(w, http.StatusInternalServerError, "failed to ingest statement")
@@ -68,7 +84,6 @@ func (h *Statement) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, statementCreateResponse{
-		ID:               result.StatementID.String(),
 		FileName:         result.FileName,
 		TransactionCount: result.TransactionCount,
 	})

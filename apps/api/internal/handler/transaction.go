@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -22,19 +23,22 @@ type Transaction struct {
 // transactionDTO is the transport shape of a transaction.
 type transactionDTO struct {
 	ID                      string  `json:"id"`
-	StatementID             string  `json:"statementId"`
-	AccountID               *string `json:"accountId"`
+	AccountID               int64   `json:"accountId"`
 	Date                    string  `json:"date"`
+	BankReferenceNumber     *string `json:"bankReferenceNumber"`
+	Justification           *string `json:"justification"`
+	Indicator               *string `json:"indicator"`
 	MerchantIdentifier      *string `json:"merchantIdentifier"`
-	Description             string  `json:"description"`
-	Direction               string  `json:"direction"`
-	Amount                  string  `json:"amount"`
-	BalanceAfterTransaction *string `json:"balanceAfterTransaction"`
+	Amount1                 *string `json:"amount1"`
 	MCCCode                 *string `json:"mccCode"`
 	CardMasked              *string `json:"cardMasked"`
 	Reference               *string `json:"reference"`
-	BankReferenceNumber     *string `json:"bankReferenceNumber"`
+	Description             string  `json:"description"`
 	PaymentMethod           *string `json:"paymentMethod"`
+	Direction               string  `json:"direction"`
+	Amount                  string  `json:"amount"`
+	BalanceAfterTransaction *string `json:"balanceAfterTransaction"`
+	StatementFileName       *string `json:"statementFileName"`
 }
 
 // transactionListResponse is the response envelope for GET /transactions.
@@ -85,20 +89,27 @@ func parseIntQuery(r *http.Request, key string, defaultVal int) (int, error) {
 }
 
 func toTransactionDTO(t repository.Transaction) transactionDTO {
+	desc := ""
+	if t.Description != nil {
+		desc = *t.Description
+	}
 	return transactionDTO{
-		ID:                      t.ID.String(),
-		StatementID:             t.StatementID.String(),
+		ID:                      fmt.Sprintf("%d", t.ID),
 		AccountID:               t.AccountID,
 		Date:                    t.Date.Format("2006-01-02"),
+		BankReferenceNumber:     t.BankReferenceNumber,
+		Justification:           t.Justification,
+		Indicator:               t.Indicator,
 		MerchantIdentifier:      t.MerchantIdentifier,
-		Description:             t.Description,
-		Direction:               t.Direction,
-		Amount:                  t.Amount,
-		BalanceAfterTransaction: t.BalanceAfterTransaction,
+		Amount1:                 t.Amount1,
 		MCCCode:                 t.MCCCode,
 		CardMasked:              t.CardMasked,
 		Reference:               t.Reference,
-		BankReferenceNumber:     t.BankReferenceNumber,
+		Description:             desc,
 		PaymentMethod:           t.PaymentMethod,
+		Direction:               t.Direction,
+		Amount:                  t.Amount,
+		BalanceAfterTransaction: t.BalanceAfterTransaction,
+		StatementFileName:       t.StatementFileName,
 	}
 }

@@ -42,17 +42,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	statementRepo := repository.NewStatementRepository()
 	transactionRepo := repository.NewTransactionRepository(pool)
+	merchantRepo := repository.NewMerchantRepository(pool)
+	reportRepo := repository.NewReportRepository(pool)
 
 	sys := service.NewSystem()
-	statementSvc := service.NewStatement(pool, parser.NewParser(), statementRepo, transactionRepo, cfg.StorageDir)
+	statementSvc := service.NewStatement(pool, parser.NewParser(), transactionRepo, cfg.StorageDir)
 	transactionSvc := service.NewTransaction(transactionRepo)
+	merchantSvc := service.NewMerchant(merchantRepo)
+	reportSvc := service.NewReport(reportRepo)
 
 	handler := server.NewRouter(server.Deps{
 		System:      sys,
 		Statement:   statementSvc,
 		Transaction: transactionSvc,
+		Merchant:    merchantSvc,
+		Report:      reportSvc,
 	})
 
 	srv := &http.Server{

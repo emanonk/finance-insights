@@ -5,8 +5,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/google/uuid"
-
 	"github.com/manoskammas/finance-insights/apps/api/internal/repository"
 )
 
@@ -31,11 +29,11 @@ func TestTransactionService_List_ClampsLimitAndOffset(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name         string
-		limit        int
-		offset       int
-		wantLimit    int
-		wantOffset   int
+		name       string
+		limit      int
+		offset     int
+		wantLimit  int
+		wantOffset int
 	}{
 		{"zero limit defaults", 0, 5, 50, 5},
 		{"negative limit defaults", -10, 0, 50, 0},
@@ -75,8 +73,9 @@ func TestTransactionService_List_ClampsLimitAndOffset(t *testing.T) {
 func TestTransactionService_List_ReturnsItems(t *testing.T) {
 	t.Parallel()
 
+	desc := "one"
 	repo := &fakeTransactionRepo{
-		items: []repository.Transaction{{ID: uuid.New(), Description: "one", Direction: "Debit", Amount: "10.00"}},
+		items: []repository.Transaction{{ID: 1, Description: &desc, Direction: "Debit", Amount: "10.00"}},
 		total: 42,
 	}
 	svc := NewTransaction(repo)

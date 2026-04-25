@@ -4,18 +4,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/manoskammas/finance-insights/apps/api/internal/parser"
 )
+
+const testAccountID int64 = 1
 
 func TestToDomainTransactions_ValidRow(t *testing.T) {
 	t.Parallel()
 
-	statementID := uuid.New()
 	parsed := []parser.ParsedTransaction{
 		{
-			AccountID:               "5009-112563-658",
 			Date:                    "08/07/2024",
 			Description:             "CARD PURCHASE",
 			Direction:               "Debit",
@@ -23,10 +21,13 @@ func TestToDomainTransactions_ValidRow(t *testing.T) {
 			BalanceAfterTransaction: "1987.26",
 			MerchantIdentifier:      "SOME MERCHANT",
 			MCCCode:                 "5411",
+			Justification:           "justification text",
+			Indicator:               "D",
+			Amount1:                 "71.49",
 		},
 	}
 
-	out, err := toDomainTransactions(statementID, parsed)
+	out, err := toDomainTransactions(testAccountID, "statement.pdf", parsed)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -34,8 +35,8 @@ func TestToDomainTransactions_ValidRow(t *testing.T) {
 		t.Fatalf("expected 1 row, got %d", len(out))
 	}
 	got := out[0]
-	if got.StatementID != statementID {
-		t.Errorf("StatementID = %v, want %v", got.StatementID, statementID)
+	if got.AccountID != testAccountID {
+		t.Errorf("AccountID = %v, want %v", got.AccountID, testAccountID)
 	}
 	wantDate := time.Date(2024, 7, 8, 0, 0, 0, 0, time.UTC)
 	if !got.Date.Equal(wantDate) {
@@ -50,6 +51,18 @@ func TestToDomainTransactions_ValidRow(t *testing.T) {
 	if got.MerchantIdentifier == nil || *got.MerchantIdentifier != "SOME MERCHANT" {
 		t.Errorf("MerchantIdentifier = %v", got.MerchantIdentifier)
 	}
+	if got.Justification == nil || *got.Justification != "justification text" {
+		t.Errorf("Justification = %v", got.Justification)
+	}
+	if got.Indicator == nil || *got.Indicator != "D" {
+		t.Errorf("Indicator = %v", got.Indicator)
+	}
+	if got.Amount1 == nil || *got.Amount1 != "71.49" {
+		t.Errorf("Amount1 = %v", got.Amount1)
+	}
+	if got.StatementFileName == nil || *got.StatementFileName != "statement.pdf" {
+		t.Errorf("StatementFileName = %v", got.StatementFileName)
+	}
 }
 
 func TestToDomainTransactions_SkipsIncompleteRows(t *testing.T) {
@@ -61,7 +74,7 @@ func TestToDomainTransactions_SkipsIncompleteRows(t *testing.T) {
 		{Date: "08/07/2024", Description: "no amount", Direction: "Debit", Amount: ""},
 		{Date: "08/07/2024", Description: "no dir", Direction: "", Amount: "1"},
 	}
-	out, err := toDomainTransactions(uuid.New(), parsed)
+	out, err := toDomainTransactions(testAccountID, "s.pdf", parsed)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -76,7 +89,7 @@ func TestToDomainTransactions_InvalidAmountFails(t *testing.T) {
 	parsed := []parser.ParsedTransaction{
 		{Date: "08/07/2024", Description: "bad", Direction: "Debit", Amount: "not-a-number"},
 	}
-	if _, err := toDomainTransactions(uuid.New(), parsed); err == nil {
+	if _, err := toDomainTransactions(testAccountID, "s.pdf", parsed); err == nil {
 		t.Fatal("expected error for invalid amount, got nil")
 	}
 }
@@ -87,7 +100,7 @@ func TestToDomainTransactions_InvalidDateFails(t *testing.T) {
 	parsed := []parser.ParsedTransaction{
 		{Date: "bad-date", Description: "bad", Direction: "Debit", Amount: "1.00"},
 	}
-	if _, err := toDomainTransactions(uuid.New(), parsed); err == nil {
+	if _, err := toDomainTransactions(testAccountID, "s.pdf", parsed); err == nil {
 		t.Fatal("expected error for invalid date, got nil")
 	}
 }

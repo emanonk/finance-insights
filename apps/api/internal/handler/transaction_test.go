@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/manoskammas/finance-insights/apps/api/internal/repository"
 	"github.com/manoskammas/finance-insights/apps/api/internal/service"
 )
@@ -92,16 +90,15 @@ func TestTransactionHandler_List_BadQueryReturns400(t *testing.T) {
 func TestTransactionHandler_List_SerializesDTO(t *testing.T) {
 	t.Parallel()
 
-	id := uuid.New()
-	sid := uuid.New()
 	merchant := "STARBUCKS"
+	desc := "CARD PURCHASE"
 	svc := &fakeTransactionService{
 		result: service.ListResult{
 			Items: []repository.Transaction{{
-				ID:                 id,
-				StatementID:        sid,
+				ID:                 42,
+				AccountID:          1,
 				Date:               time.Date(2024, 7, 8, 0, 0, 0, 0, time.UTC),
-				Description:        "CARD PURCHASE",
+				Description:        &desc,
 				Direction:          "Debit",
 				Amount:             "71.49",
 				MerchantIdentifier: &merchant,
@@ -125,14 +122,17 @@ func TestTransactionHandler_List_SerializesDTO(t *testing.T) {
 		t.Fatalf("items = %d, want 1", len(body.Items))
 	}
 	item := body.Items[0]
-	if item.ID != id.String() {
-		t.Errorf("id = %q, want %q", item.ID, id.String())
+	if item.ID != "42" {
+		t.Errorf("id = %q, want %q", item.ID, "42")
 	}
 	if item.Date != "2024-07-08" {
 		t.Errorf("date = %q, want 2024-07-08", item.Date)
 	}
 	if item.Amount != "71.49" {
 		t.Errorf("amount = %q, want 71.49", item.Amount)
+	}
+	if item.AccountID != 1 {
+		t.Errorf("accountId = %d, want 1", item.AccountID)
 	}
 }
 
