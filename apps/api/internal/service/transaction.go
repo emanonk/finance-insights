@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/manoskammas/finance-insights/apps/api/internal/repository"
+	"github.com/manoskammas/finance-insights/apps/api/internal/domain"
 )
 
 const (
@@ -14,7 +14,7 @@ const (
 
 // transactionReader is the subset of the transaction repository used by the service.
 type transactionReader interface {
-	List(ctx context.Context, limit, offset int) ([]repository.Transaction, int, error)
+	List(ctx context.Context, limit, offset int) ([]domain.Transaction, int, error)
 }
 
 // Transaction serves read-side transaction queries.
@@ -29,7 +29,7 @@ func NewTransaction(repo transactionReader) *Transaction {
 
 // ListResult is the paginated result of a transaction listing.
 type ListResult struct {
-	Items  []repository.Transaction
+	Items  []domain.Transaction
 	Total  int
 	Limit  int
 	Offset int

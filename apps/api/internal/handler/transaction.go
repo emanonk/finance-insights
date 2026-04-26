@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/manoskammas/finance-insights/apps/api/internal/repository"
+	"github.com/manoskammas/finance-insights/apps/api/internal/domain"
 	"github.com/manoskammas/finance-insights/apps/api/internal/service"
 )
 
@@ -88,7 +88,7 @@ func parseIntQuery(r *http.Request, key string, defaultVal int) (int, error) {
 	return strconv.Atoi(raw)
 }
 
-func toTransactionDTO(t repository.Transaction) transactionDTO {
+func toTransactionDTO(t domain.Transaction) transactionDTO {
 	desc := ""
 	if t.Description != nil {
 		desc = *t.Description

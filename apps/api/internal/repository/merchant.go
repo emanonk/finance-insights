@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/manoskammas/finance-insights/apps/api/internal/domain"
 )
 
 // MerchantRepository persists and queries merchant records and their tags.
@@ -19,7 +21,7 @@ func NewMerchantRepository(pool *pgxpool.Pool) *MerchantRepository {
 
 // TopIdentifiers returns the most frequent merchant_identifier values from
 // the transactions table, joined with any existing merchant record.
-func (r *MerchantRepository) TopIdentifiers(ctx context.Context, limit int) ([]IdentifierCount, error) {
+func (r *MerchantRepository) TopIdentifiers(ctx context.Context, limit int) ([]domain.IdentifierCount, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT
 			t.merchant_identifier,
@@ -42,7 +44,7 @@ func (r *MerchantRepository) TopIdentifiers(ctx context.Context, limit int) ([]I
 	}
 	defer rows.Close()
 
-	var out []IdentifierCount
+	var out []domain.IdentifierCount
 	for rows.Next() {
 		var (
 			identifier string
@@ -56,15 +58,15 @@ func (r *MerchantRepository) TopIdentifiers(ctx context.Context, limit int) ([]I
 		if err := rows.Scan(&identifier, &count, &mID, &mTitle, &ptID, &ptName, &ptType); err != nil {
 			return nil, fmt.Errorf("scan top identifier: %w", err)
 		}
-		ic := IdentifierCount{Identifier: identifier, Count: count}
+		ic := domain.IdentifierCount{Identifier: identifier, Count: count}
 		if mID != nil {
-			m := &Merchant{
+			m := &domain.Merchant{
 				ID:             *mID,
 				IdentifierName: identifier,
 				DefaultTitle:   mTitle,
 			}
 			if ptID != nil {
-				m.PrimaryTag = Tag{ID: *ptID, Name: *ptName, Type: *ptType}
+				m.PrimaryTag = domain.Tag{ID: *ptID, Name: *ptName, Type: *ptType}
 			}
 			ic.Merchant = m
 		}
@@ -74,7 +76,6 @@ func (r *MerchantRepository) TopIdentifiers(ctx context.Context, limit int) ([]I
 		return nil, fmt.Errorf("iterate top identifiers: %w", err)
 	}
 
-	// Load secondary tags for merchants that already have a record.
 	for i, ic := range out {
 		if ic.Merchant == nil {
 			continue
@@ -89,7 +90,7 @@ func (r *MerchantRepository) TopIdentifiers(ctx context.Context, limit int) ([]I
 	return out, nil
 }
 
-func (r *MerchantRepository) loadSecondaryTags(ctx context.Context, merchantID int64) ([]Tag, error) {
+func (r *MerchantRepository) loadSecondaryTags(ctx context.Context, merchantID int64) ([]domain.Tag, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT t.id, t.name, t.type
 		FROM merchant_secondary_tags mst
@@ -102,9 +103,9 @@ func (r *MerchantRepository) loadSecondaryTags(ctx context.Context, merchantID i
 	}
 	defer rows.Close()
 
-	var tags []Tag
+	var tags []domain.Tag
 	for rows.Next() {
-		var t Tag
+		var t domain.Tag
 		if err := rows.Scan(&t.ID, &t.Name, &t.Type); err != nil {
 			return nil, fmt.Errorf("scan secondary tag: %w", err)
 		}
@@ -120,14 +121,13 @@ func (r *MerchantRepository) Upsert(
 	identifierName string,
 	primaryTagName string,
 	secondaryTagNames []string,
-) (*Merchant, error) {
+) (*domain.Merchant, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("begin tx: %w", err)
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 
-	// Upsert the primary tag.
 	var ptID int64
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO tags (name, type) VALUES ($1, 'primary')
@@ -137,7 +137,6 @@ func (r *MerchantRepository) Upsert(
 		return nil, fmt.Errorf("upsert primary tag: %w", err)
 	}
 
-	// Upsert the merchant.
 	var mID int64
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO merchants (identifier_name, primary_tag_id)
@@ -148,12 +147,11 @@ func (r *MerchantRepository) Upsert(
 		return nil, fmt.Errorf("upsert merchant: %w", err)
 	}
 
-	// Replace secondary tags.
 	if _, err := tx.Exec(ctx, `DELETE FROM merchant_secondary_tags WHERE merchant_id = $1`, mID); err != nil {
 		return nil, fmt.Errorf("clear secondary tags: %w", err)
 	}
 
-	secTags := make([]Tag, 0, len(secondaryTagNames))
+	secTags := make([]domain.Tag, 0, len(secondaryTagNames))
 	for _, name := range secondaryTagNames {
 		if name == "" {
 			continue
@@ -172,17 +170,17 @@ func (r *MerchantRepository) Upsert(
 		`, mID, stID); err != nil {
 			return nil, fmt.Errorf("link secondary tag: %w", err)
 		}
-		secTags = append(secTags, Tag{ID: stID, Name: name, Type: "secondary"})
+		secTags = append(secTags, domain.Tag{ID: stID, Name: name, Type: "secondary"})
 	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("commit: %w", err)
 	}
 
-	return &Merchant{
+	return &domain.Merchant{
 		ID:             mID,
 		IdentifierName: identifierName,
-		PrimaryTag:     Tag{ID: ptID, Name: primaryTagName, Type: "primary"},
+		PrimaryTag:     domain.Tag{ID: ptID, Name: primaryTagName, Type: "primary"},
 		SecondaryTags:  secTags,
 	}, nil
 }

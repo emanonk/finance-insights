@@ -4,15 +4,15 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/manoskammas/finance-insights/apps/api/internal/repository"
+	"github.com/manoskammas/finance-insights/apps/api/internal/domain"
 	"github.com/manoskammas/finance-insights/apps/api/internal/service"
 )
 
 type reportService interface {
-	SpendByPrimaryTag(ctx context.Context) ([]repository.TagSpend, error)
-	SpendBySecondaryTag(ctx context.Context) ([]repository.TagSpend, error)
+	SpendByPrimaryTag(ctx context.Context) ([]domain.TagSpend, error)
+	SpendBySecondaryTag(ctx context.Context) ([]domain.TagSpend, error)
 	MerchantsByMonth(ctx context.Context) ([]service.MerchantSummary, error)
-	DailySpend(ctx context.Context) ([]repository.DailySpend, error)
+	DailySpend(ctx context.Context) ([]domain.DailySpend, error)
 }
 
 // Report serves report endpoints.

@@ -7,12 +7,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/manoskammas/finance-insights/apps/api/internal/repository"
+	"github.com/manoskammas/finance-insights/apps/api/internal/domain"
 )
 
 type merchantService interface {
-	TopIdentifiers(ctx context.Context, limit int) ([]repository.IdentifierCount, error)
-	UpsertMerchant(ctx context.Context, identifierName, primaryTagName string, secondaryTagNames []string) (*repository.Merchant, error)
+	TopIdentifiers(ctx context.Context, limit int) ([]domain.IdentifierCount, error)
+	UpsertMerchant(ctx context.Context, identifierName, primaryTagName string, secondaryTagNames []string) (*domain.Merchant, error)
 }
 
 // Merchant serves merchant and tag endpoints.
@@ -94,7 +94,6 @@ func (h *Merchant) Upsert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Trim whitespace from secondary tag names and drop empty strings.
 	cleaned := req.SecondaryTagNames[:0]
 	for _, s := range req.SecondaryTagNames {
 		if t := strings.TrimSpace(s); t != "" {
@@ -110,7 +109,7 @@ func (h *Merchant) Upsert(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, toMerchantDTO(m))
 }
 
-func toMerchantDTO(m *repository.Merchant) *merchantDTO {
+func toMerchantDTO(m *domain.Merchant) *merchantDTO {
 	sec := make([]tagDTO, 0, len(m.SecondaryTags))
 	for _, t := range m.SecondaryTags {
 		sec = append(sec, tagDTO{ID: t.ID, Name: t.Name, Type: t.Type})

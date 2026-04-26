@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/manoskammas/finance-insights/apps/api/internal/repository"
+	"github.com/manoskammas/finance-insights/apps/api/internal/domain"
 )
 
 const defaultTopMerchantsLimit = 30
 
 type merchantStore interface {
-	TopIdentifiers(ctx context.Context, limit int) ([]repository.IdentifierCount, error)
-	Upsert(ctx context.Context, identifierName, primaryTagName string, secondaryTagNames []string) (*repository.Merchant, error)
+	TopIdentifiers(ctx context.Context, limit int) ([]domain.IdentifierCount, error)
+	Upsert(ctx context.Context, identifierName, primaryTagName string, secondaryTagNames []string) (*domain.Merchant, error)
 }
 
 // Merchant serves merchant/tag read and write operations.
@@ -25,7 +25,7 @@ func NewMerchant(repo merchantStore) *Merchant {
 }
 
 // TopIdentifiers returns the most frequent merchant identifiers, capped at 100.
-func (s *Merchant) TopIdentifiers(ctx context.Context, limit int) ([]repository.IdentifierCount, error) {
+func (s *Merchant) TopIdentifiers(ctx context.Context, limit int) ([]domain.IdentifierCount, error) {
 	if limit <= 0 || limit > 100 {
 		limit = defaultTopMerchantsLimit
 	}
@@ -42,7 +42,7 @@ func (s *Merchant) UpsertMerchant(
 	identifierName string,
 	primaryTagName string,
 	secondaryTagNames []string,
-) (*repository.Merchant, error) {
+) (*domain.Merchant, error) {
 	if identifierName == "" {
 		return nil, fmt.Errorf("identifierName is required")
 	}

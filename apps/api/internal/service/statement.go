@@ -14,40 +14,48 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/manoskammas/finance-insights/apps/api/internal/parser"
-	"github.com/manoskammas/finance-insights/apps/api/internal/repository"
+	"github.com/manoskammas/finance-insights/apps/api/internal/domain"
+	"github.com/manoskammas/finance-insights/apps/api/internal/parsers"
 )
 
 // transactionWriter bulk-persists transactions inside the given tx.
 type transactionWriter interface {
-	InsertBatch(ctx context.Context, tx pgx.Tx, txs []repository.Transaction) error
+	InsertBatch(ctx context.Context, tx pgx.Tx, txs []domain.Transaction) error
 }
 
-// pdfParser parses a PDF file on disk into ParsedTransactions.
-type pdfParser interface {
-	Parse(pdfPath string) ([]parser.ParsedTransaction, error)
+// statementParser parses a PDF file on disk into a ParseResult.
+type statementParser interface {
+	Parse(bankName, pdfPath string) (parsers.ParseResult, error)
+}
+
+// bankLookup resolves the bank name for a given account id.
+type bankLookup interface {
+	BankName(ctx context.Context, accountID int64) (string, error)
 }
 
 // Statement orchestrates statement ingest: save the upload, parse it,
 // and persist the transactions atomically.
 type Statement struct {
 	pool       *pgxpool.Pool
-	parser     pdfParser
+	parser     statementParser
 	txs        transactionWriter
+	accounts   bankLookup
 	storageDir string
 }
 
 // NewStatement constructs a Statement service.
 func NewStatement(
 	pool *pgxpool.Pool,
-	p pdfParser,
+	p statementParser,
 	txs transactionWriter,
+	accounts bankLookup,
 	storageDir string,
 ) *Statement {
 	return &Statement{
 		pool:       pool,
 		parser:     p,
 		txs:        txs,
+		accounts:   accounts,
 		storageDir: storageDir,
 	}
 }
@@ -58,22 +66,27 @@ type IngestResult struct {
 	TransactionCount int
 }
 
-// Ingest saves the uploaded PDF to disk, parses it, and persists all parsed
-// transactions in a single DB transaction. accountID must be a valid FK into
-// the accounts table — the caller is responsible for resolving it.
+// Ingest saves the uploaded PDF to disk, parses it with the bank's registered
+// parsers, and persists all parsed transactions in a single DB transaction.
+// accountID must be a valid FK into the accounts table.
 func (s *Statement) Ingest(ctx context.Context, accountID int64, fileName string, r io.Reader) (IngestResult, error) {
+	bankName, err := s.accounts.BankName(ctx, accountID)
+	if err != nil {
+		return IngestResult{}, fmt.Errorf("lookup account: %w", err)
+	}
+
 	storedPath, err := s.saveToDisk(fileName, r)
 	if err != nil {
 		return IngestResult{}, err
 	}
 
-	parsed, err := s.parser.Parse(storedPath)
+	result, err := s.parser.Parse(bankName, storedPath)
 	if err != nil {
 		_ = os.Remove(storedPath)
 		return IngestResult{}, fmt.Errorf("parse statement: %w", err)
 	}
 
-	domainTxs, err := toDomainTransactions(accountID, fileName, parsed)
+	domainTxs, err := toDomainTransactions(accountID, fileName, result.Transactions)
 	if err != nil {
 		_ = os.Remove(storedPath)
 		return IngestResult{}, fmt.Errorf("normalize transactions: %w", err)
@@ -96,7 +109,6 @@ func (s *Statement) saveToDisk(fileName string, r io.Reader) (string, error) {
 		return "", fmt.Errorf("create storage dir: %w", err)
 	}
 
-	// Use a timestamped name to avoid collisions with identically-named files.
 	safeName := fmt.Sprintf("%d_%s", time.Now().UnixNano(), filepath.Base(fileName))
 	path := filepath.Join(dir, safeName)
 	f, err := os.Create(path)
@@ -112,7 +124,7 @@ func (s *Statement) saveToDisk(fileName string, r io.Reader) (string, error) {
 	return path, nil
 }
 
-func (s *Statement) persist(ctx context.Context, txs []repository.Transaction) error {
+func (s *Statement) persist(ctx context.Context, txs []domain.Transaction) error {
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
@@ -128,11 +140,10 @@ func (s *Statement) persist(ctx context.Context, txs []repository.Transaction) e
 	return nil
 }
 
-// toDomainTransactions converts parser output into repository-layer rows.
-// Transactions that lack a required field (date, direction, amount, description)
-// are skipped rather than failing the whole upload; malformed values fail fast.
-func toDomainTransactions(accountID int64, fileName string, parsed []parser.ParsedTransaction) ([]repository.Transaction, error) {
-	out := make([]repository.Transaction, 0, len(parsed))
+// toDomainTransactions converts parser output into domain transactions.
+// Transactions missing required fields are skipped; malformed values fail fast.
+func toDomainTransactions(accountID int64, fileName string, parsed []parsers.ParsedTransaction) ([]domain.Transaction, error) {
+	out := make([]domain.Transaction, 0, len(parsed))
 	for i, p := range parsed {
 		if strings.TrimSpace(p.Date) == "" ||
 			strings.TrimSpace(p.Direction) == "" ||
@@ -151,7 +162,7 @@ func toDomainTransactions(accountID int64, fileName string, parsed []parser.Pars
 		}
 
 		desc := p.Description
-		t := repository.Transaction{
+		t := domain.Transaction{
 			AccountID:           accountID,
 			Date:                date,
 			BankReferenceNumber: nullableString(p.BankReferenceNumber),
@@ -163,7 +174,7 @@ func toDomainTransactions(accountID int64, fileName string, parsed []parser.Pars
 			Reference:           nullableString(p.Reference),
 			Description:         &desc,
 			PaymentMethod:       nullableString(p.PaymentMethod),
-			Direction:           p.Direction,
+			Direction:           strings.ToLower(p.Direction),
 			Amount:              amount,
 			StatementFileName:   &fileName,
 		}
@@ -197,7 +208,7 @@ func parseDate(s string) (time.Time, error) {
 }
 
 // normalizeAmountString ensures the parser-provided amount is a valid decimal
-// number expressible as numeric(14,2). It returns the canonical dot-decimal form.
+// expressible as numeric(14,2). It returns the canonical dot-decimal form.
 func normalizeAmountString(s string) (string, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {

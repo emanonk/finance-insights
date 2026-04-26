@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/manoskammas/finance-insights/apps/api/internal/parser"
+	"github.com/manoskammas/finance-insights/apps/api/internal/parsers"
 )
 
 const testAccountID int64 = 1
@@ -12,7 +12,7 @@ const testAccountID int64 = 1
 func TestToDomainTransactions_ValidRow(t *testing.T) {
 	t.Parallel()
 
-	parsed := []parser.ParsedTransaction{
+	parsed := []parsers.ParsedTransaction{
 		{
 			Date:                    "08/07/2024",
 			Description:             "CARD PURCHASE",
@@ -68,7 +68,7 @@ func TestToDomainTransactions_ValidRow(t *testing.T) {
 func TestToDomainTransactions_SkipsIncompleteRows(t *testing.T) {
 	t.Parallel()
 
-	parsed := []parser.ParsedTransaction{
+	parsed := []parsers.ParsedTransaction{
 		{Date: "", Description: "no date", Direction: "Debit", Amount: "1"},
 		{Date: "08/07/2024", Description: "", Direction: "Debit", Amount: "1"},
 		{Date: "08/07/2024", Description: "no amount", Direction: "Debit", Amount: ""},
@@ -86,7 +86,7 @@ func TestToDomainTransactions_SkipsIncompleteRows(t *testing.T) {
 func TestToDomainTransactions_InvalidAmountFails(t *testing.T) {
 	t.Parallel()
 
-	parsed := []parser.ParsedTransaction{
+	parsed := []parsers.ParsedTransaction{
 		{Date: "08/07/2024", Description: "bad", Direction: "Debit", Amount: "not-a-number"},
 	}
 	if _, err := toDomainTransactions(testAccountID, "s.pdf", parsed); err == nil {
@@ -97,7 +97,7 @@ func TestToDomainTransactions_InvalidAmountFails(t *testing.T) {
 func TestToDomainTransactions_InvalidDateFails(t *testing.T) {
 	t.Parallel()
 
-	parsed := []parser.ParsedTransaction{
+	parsed := []parsers.ParsedTransaction{
 		{Date: "bad-date", Description: "bad", Direction: "Debit", Amount: "1.00"},
 	}
 	if _, err := toDomainTransactions(testAccountID, "s.pdf", parsed); err == nil {

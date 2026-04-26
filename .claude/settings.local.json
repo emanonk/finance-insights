@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -f internal/parser/parser.go internal/parser/transaction.go internal/parser/extractor.go internal/repository/model.go internal/db/migrations/02_spend_by_month.sql internal/db/migrations/03_recurring_by_year.sql internal/db/migrations/04_recurring_ytd.sql)",
+      "Bash(rmdir internal/parser)",
+      "Bash(rm -rf internal/parsers/pireos)",
+      "Bash(go build *)",
+      "Bash(go test *)",
+      "Bash(go vet *)"
+    ]
+  }
+}

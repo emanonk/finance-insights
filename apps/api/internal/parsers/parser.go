@@ -1,8 +1,9 @@
-package parser
+// Package parsers defines the shared interfaces and types for bank statement parsers.
+package parsers
 
-// ParsedTransaction is the raw, unnormalized output of the PDF parser.
-// Fields are strings because parsing preserves the source representation;
-// conversion to domain types happens in the service layer.
+// ParsedTransaction is the raw, unnormalized output of any bank statement parser.
+// Fields are strings to preserve the source representation; normalization to domain
+// types happens in the service layer.
 type ParsedTransaction struct {
 	AccountID               string
 	Date                    string
@@ -19,4 +20,11 @@ type ParsedTransaction struct {
 	Direction               string
 	Amount                  string
 	BalanceAfterTransaction string
+}
+
+// BankParser is implemented by each versioned parser for a specific bank.
+type BankParser interface {
+	BankName() string
+	Version() string
+	Parse(pdfPath string) ([]ParsedTransaction, error)
 }

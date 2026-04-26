@@ -6,6 +6,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/manoskammas/finance-insights/apps/api/internal/domain"
 )
 
 // TransactionRepository persists and queries transactions.
@@ -23,7 +25,7 @@ func NewTransactionRepository(pool *pgxpool.Pool) *TransactionRepository {
 func (r *TransactionRepository) InsertBatch(
 	ctx context.Context,
 	tx pgx.Tx,
-	txs []Transaction,
+	txs []domain.Transaction,
 ) error {
 	if len(txs) == 0 {
 		return nil
@@ -67,7 +69,7 @@ func (r *TransactionRepository) InsertBatch(
 
 // List returns transactions ordered by date desc (then id desc) with pagination,
 // along with the total number of rows in the table.
-func (r *TransactionRepository) List(ctx context.Context, limit, offset int) ([]Transaction, int, error) {
+func (r *TransactionRepository) List(ctx context.Context, limit, offset int) ([]domain.Transaction, int, error) {
 	rows, err := r.pool.Query(ctx, `
         SELECT
             id,
@@ -98,11 +100,11 @@ func (r *TransactionRepository) List(ctx context.Context, limit, offset int) ([]
 	defer rows.Close()
 
 	var (
-		out   []Transaction
+		out   []domain.Transaction
 		total int
 	)
 	for rows.Next() {
-		var t Transaction
+		var t domain.Transaction
 		if err := rows.Scan(
 			&t.ID,
 			&t.AccountID,

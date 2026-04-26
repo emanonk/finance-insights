@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/manoskammas/finance-insights/apps/api/internal/domain"
 )
 
 // ReportRepository runs read-only aggregate queries for the reports section.
@@ -17,25 +19,8 @@ func NewReportRepository(pool *pgxpool.Pool) *ReportRepository {
 	return &ReportRepository{pool: pool}
 }
 
-// TagSpend is a single row in a spend-by-tag report.
-type TagSpend struct {
-	TagName string
-	Total   string // numeric string, e.g. "1234.56"
-	Count   int
-}
-
-// MerchantMonthRow is one (merchant, month) bucket from the monthly merchant report.
-type MerchantMonthRow struct {
-	Identifier string
-	Month      string // "YYYY-MM"
-	Total      string
-	MaxAmount  string
-	AvgAmount  string
-	Count      int
-}
-
 // SpendByPrimaryTag returns debit totals grouped by primary tag (merchants only).
-func (r *ReportRepository) SpendByPrimaryTag(ctx context.Context) ([]TagSpend, error) {
+func (r *ReportRepository) SpendByPrimaryTag(ctx context.Context) ([]domain.TagSpend, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT
 			tg.name,
@@ -53,9 +38,9 @@ func (r *ReportRepository) SpendByPrimaryTag(ctx context.Context) ([]TagSpend, e
 	}
 	defer rows.Close()
 
-	var out []TagSpend
+	var out []domain.TagSpend
 	for rows.Next() {
-		var s TagSpend
+		var s domain.TagSpend
 		if err := rows.Scan(&s.TagName, &s.Total, &s.Count); err != nil {
 			return nil, fmt.Errorf("scan primary tag row: %w", err)
 		}
@@ -65,7 +50,7 @@ func (r *ReportRepository) SpendByPrimaryTag(ctx context.Context) ([]TagSpend, e
 }
 
 // SpendBySecondaryTag returns debit totals grouped by secondary tag.
-func (r *ReportRepository) SpendBySecondaryTag(ctx context.Context) ([]TagSpend, error) {
+func (r *ReportRepository) SpendBySecondaryTag(ctx context.Context) ([]domain.TagSpend, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT
 			tg.name,
@@ -84,9 +69,9 @@ func (r *ReportRepository) SpendBySecondaryTag(ctx context.Context) ([]TagSpend,
 	}
 	defer rows.Close()
 
-	var out []TagSpend
+	var out []domain.TagSpend
 	for rows.Next() {
-		var s TagSpend
+		var s domain.TagSpend
 		if err := rows.Scan(&s.TagName, &s.Total, &s.Count); err != nil {
 			return nil, fmt.Errorf("scan secondary tag row: %w", err)
 		}
@@ -95,14 +80,8 @@ func (r *ReportRepository) SpendBySecondaryTag(ctx context.Context) ([]TagSpend,
 	return out, rows.Err()
 }
 
-// DailySpend is a single day's debit total.
-type DailySpend struct {
-	Date  string // "YYYY-MM-DD"
-	Total string
-}
-
 // DailySpend returns total debit spending per calendar day.
-func (r *ReportRepository) DailySpend(ctx context.Context) ([]DailySpend, error) {
+func (r *ReportRepository) DailySpend(ctx context.Context) ([]domain.DailySpend, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT date::text, SUM(amount)::text
 		FROM transactions
@@ -115,9 +94,9 @@ func (r *ReportRepository) DailySpend(ctx context.Context) ([]DailySpend, error)
 	}
 	defer rows.Close()
 
-	var out []DailySpend
+	var out []domain.DailySpend
 	for rows.Next() {
-		var d DailySpend
+		var d domain.DailySpend
 		if err := rows.Scan(&d.Date, &d.Total); err != nil {
 			return nil, fmt.Errorf("scan daily spend: %w", err)
 		}
@@ -128,7 +107,7 @@ func (r *ReportRepository) DailySpend(ctx context.Context) ([]DailySpend, error)
 
 // MerchantsByMonth returns per-month aggregates for every known merchant identifier.
 // Results are ordered by merchant identifier then month ascending.
-func (r *ReportRepository) MerchantsByMonth(ctx context.Context) ([]MerchantMonthRow, error) {
+func (r *ReportRepository) MerchantsByMonth(ctx context.Context) ([]domain.MerchantMonthRow, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT
 			tx.merchant_identifier,
@@ -148,9 +127,9 @@ func (r *ReportRepository) MerchantsByMonth(ctx context.Context) ([]MerchantMont
 	}
 	defer rows.Close()
 
-	var out []MerchantMonthRow
+	var out []domain.MerchantMonthRow
 	for rows.Next() {
-		var row MerchantMonthRow
+		var row domain.MerchantMonthRow
 		if err := rows.Scan(
 			&row.Identifier,
 			&row.Month,
@@ -162,6 +141,86 @@ func (r *ReportRepository) MerchantsByMonth(ctx context.Context) ([]MerchantMont
 			return nil, fmt.Errorf("scan merchant month row: %w", err)
 		}
 		out = append(out, row)
+	}
+	return out, rows.Err()
+}
+
+// RecurringByYear returns recurring debit patterns with at least 10 occurrences
+// in a full calendar year (same merchant + same rounded amount).
+func (r *ReportRepository) RecurringByYear(ctx context.Context) ([]domain.RecurringCharge, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT
+			EXTRACT(YEAR FROM t.date)::int AS calendar_year,
+			t.merchant_identifier,
+			round(t.amount::numeric, 2)::text AS charge_amount,
+			COUNT(*)::int AS occurrences,
+			SUM(t.amount)::text AS total_debited,
+			MIN(t.date)::text AS first_date,
+			MAX(t.date)::text AS last_date
+		FROM transactions t
+		LEFT JOIN transaction_extra te ON te.transaction_id = t.id
+		WHERE t.direction = 'debit'
+		  AND t.merchant_identifier IS NOT NULL
+		  AND COALESCE(te.in_report, true)
+		GROUP BY calendar_year, t.merchant_identifier, round(t.amount::numeric, 2)
+		HAVING COUNT(*) >= 10
+		ORDER BY calendar_year, SUM(t.amount) DESC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("recurring by year: %w", err)
+	}
+	defer rows.Close()
+	return scanRecurringRows(rows)
+}
+
+// RecurringYTD returns recurring debit patterns with at least 3 occurrences,
+// suitable for detecting recurring charges in a partial year.
+func (r *ReportRepository) RecurringYTD(ctx context.Context) ([]domain.RecurringCharge, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT
+			EXTRACT(YEAR FROM t.date)::int AS calendar_year,
+			t.merchant_identifier,
+			round(t.amount::numeric, 2)::text AS charge_amount,
+			COUNT(*)::int AS occurrences,
+			SUM(t.amount)::text AS total_debited,
+			MIN(t.date)::text AS first_date,
+			MAX(t.date)::text AS last_date
+		FROM transactions t
+		LEFT JOIN transaction_extra te ON te.transaction_id = t.id
+		WHERE t.direction = 'debit'
+		  AND t.merchant_identifier IS NOT NULL
+		  AND COALESCE(te.in_report, true)
+		GROUP BY calendar_year, t.merchant_identifier, round(t.amount::numeric, 2)
+		HAVING COUNT(*) >= 3
+		ORDER BY calendar_year, SUM(t.amount) DESC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("recurring ytd: %w", err)
+	}
+	defer rows.Close()
+	return scanRecurringRows(rows)
+}
+
+func scanRecurringRows(rows interface {
+	Next() bool
+	Scan(...any) error
+	Err() error
+}) ([]domain.RecurringCharge, error) {
+	var out []domain.RecurringCharge
+	for rows.Next() {
+		var c domain.RecurringCharge
+		if err := rows.Scan(
+			&c.CalendarYear,
+			&c.Identifier,
+			&c.Amount,
+			&c.Occurrences,
+			&c.TotalDebited,
+			&c.FirstDate,
+			&c.LastDate,
+		); err != nil {
+			return nil, fmt.Errorf("scan recurring charge: %w", err)
+		}
+		out = append(out, c)
 	}
 	return out, rows.Err()
 }

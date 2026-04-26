@@ -12,7 +12,8 @@ import (
 
 	"github.com/manoskammas/finance-insights/apps/api/internal/config"
 	"github.com/manoskammas/finance-insights/apps/api/internal/db"
-	"github.com/manoskammas/finance-insights/apps/api/internal/parser"
+	piraeusv1 "github.com/manoskammas/finance-insights/apps/api/internal/parsers/piraeus/v1"
+	"github.com/manoskammas/finance-insights/apps/api/internal/parsers"
 	"github.com/manoskammas/finance-insights/apps/api/internal/repository"
 	"github.com/manoskammas/finance-insights/apps/api/internal/server"
 	"github.com/manoskammas/finance-insights/apps/api/internal/service"
@@ -42,12 +43,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Parser registry — register all bank versions in preference order.
+	registry := parsers.NewRegistry()
+	registry.Register(piraeusv1.New())
+
+	accountRepo := repository.NewAccountRepository(pool)
 	transactionRepo := repository.NewTransactionRepository(pool)
 	merchantRepo := repository.NewMerchantRepository(pool)
 	reportRepo := repository.NewReportRepository(pool)
 
 	sys := service.NewSystem()
-	statementSvc := service.NewStatement(pool, parser.NewParser(), transactionRepo, cfg.StorageDir)
+	statementSvc := service.NewStatement(pool, registry, transactionRepo, accountRepo, cfg.StorageDir)
 	transactionSvc := service.NewTransaction(transactionRepo)
 	merchantSvc := service.NewMerchant(merchantRepo)
 	reportSvc := service.NewReport(reportRepo)

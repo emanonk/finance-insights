@@ -5,18 +5,18 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/manoskammas/finance-insights/apps/api/internal/repository"
+	"github.com/manoskammas/finance-insights/apps/api/internal/domain"
 )
 
 type fakeTransactionRepo struct {
 	gotLimit  int
 	gotOffset int
-	items     []repository.Transaction
+	items     []domain.Transaction
 	total     int
 	err       error
 }
 
-func (f *fakeTransactionRepo) List(_ context.Context, limit, offset int) ([]repository.Transaction, int, error) {
+func (f *fakeTransactionRepo) List(_ context.Context, limit, offset int) ([]domain.Transaction, int, error) {
 	f.gotLimit = limit
 	f.gotOffset = offset
 	if f.err != nil {
@@ -75,7 +75,7 @@ func TestTransactionService_List_ReturnsItems(t *testing.T) {
 
 	desc := "one"
 	repo := &fakeTransactionRepo{
-		items: []repository.Transaction{{ID: 1, Description: &desc, Direction: "Debit", Amount: "10.00"}},
+		items: []domain.Transaction{{ID: 1, Description: &desc, Direction: "debit", Amount: "10.00"}},
 		total: 42,
 	}
 	svc := NewTransaction(repo)

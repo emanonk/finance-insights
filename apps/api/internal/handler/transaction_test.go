@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/manoskammas/finance-insights/apps/api/internal/repository"
+	"github.com/manoskammas/finance-insights/apps/api/internal/domain"
 	"github.com/manoskammas/finance-insights/apps/api/internal/service"
 )
 
@@ -94,12 +94,12 @@ func TestTransactionHandler_List_SerializesDTO(t *testing.T) {
 	desc := "CARD PURCHASE"
 	svc := &fakeTransactionService{
 		result: service.ListResult{
-			Items: []repository.Transaction{{
+			Items: []domain.Transaction{{
 				ID:                 42,
 				AccountID:          1,
 				Date:               time.Date(2024, 7, 8, 0, 0, 0, 0, time.UTC),
 				Description:        &desc,
-				Direction:          "Debit",
+				Direction:          "debit",
 				Amount:             "71.49",
 				MerchantIdentifier: &merchant,
 			}},

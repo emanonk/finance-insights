@@ -1,9 +1,11 @@
-// Package parser parses Piraeus Bank PDF statements into structured transactions.
-package parser
+// Package v1 parses Piraeus Bank PDF statements (format version 1).
+package v1
 
 import (
 	"regexp"
 	"strings"
+
+	"github.com/manoskammas/finance-insights/apps/api/internal/parsers"
 )
 
 // Compiled regexes for the Piraeus Bank statement layout produced by pdftotext -layout.
@@ -14,7 +16,6 @@ var (
 	// Transaction header line:
 	//   optional date   ref-indicator  ref-code       description           opt-value-date  amount  balance
 	//   08/07/24        2960           EL01P 0442174  ΑΠΚ ΑΓΟΡΑ ΜΕ ΚΑΡΤΑ   08/07/24        71.49   1,987.26ΠΙ
-	// The reference code block is digits + space + alphanumeric sequence + space + alphanumeric sequence.
 	reTransHeader = regexp.MustCompile(
 		`^\s*(\d{2}/\d{2}/\d{2})?\s{1,10}` + // optional date
 			`(\d{4})\s+` + // indicator (4-digit code)
@@ -35,14 +36,17 @@ var (
 	reMCCLine    = regexp.MustCompile(`^[\s\t]*(\d{4})\s*(GOOGLE-PAY|APPLE-PAY)?\s*$`)
 )
 
-// Parser parses Piraeus Bank PDF statements.
+// Parser implements parsers.BankParser for Piraeus Bank statement format v1.
 type Parser struct{}
 
-// NewParser returns a new Parser.
-func NewParser() *Parser { return &Parser{} }
+// New returns a new Piraeus Bank v1 Parser.
+func New() *Parser { return &Parser{} }
+
+func (p *Parser) BankName() string { return "piraeus" }
+func (p *Parser) Version() string  { return "v1" }
 
 // Parse extracts all transactions from the PDF at pdfPath.
-func (p *Parser) Parse(pdfPath string) ([]ParsedTransaction, error) {
+func (p *Parser) Parse(pdfPath string) ([]parsers.ParsedTransaction, error) {
 	raw, err := extractText(pdfPath)
 	if err != nil {
 		return nil, err
@@ -53,23 +57,19 @@ func (p *Parser) Parse(pdfPath string) ([]ParsedTransaction, error) {
 		accountID = m
 	}
 
-	var transactions []ParsedTransaction
-	pages := splitPages(raw)
-
-	for _, page := range pages {
-		txs := parsePage(page, accountID)
-		transactions = append(transactions, txs...)
+	var transactions []parsers.ParsedTransaction
+	for _, page := range splitPages(raw) {
+		transactions = append(transactions, parsePage(page, accountID)...)
 	}
-
 	return transactions, nil
 }
 
 // parsePage processes one page of pdftotext -layout output.
-func parsePage(page, accountID string) []ParsedTransaction {
+func parsePage(page, accountID string) []parsers.ParsedTransaction {
 	lines := strings.Split(page, "\n")
-	var result []ParsedTransaction
+	var result []parsers.ParsedTransaction
 
-	var current *ParsedTransaction
+	var current *parsers.ParsedTransaction
 	var lastDate string
 	inDetail := false
 
@@ -121,23 +121,15 @@ func parsePage(page, accountID string) []ParsedTransaction {
 				lastDate = date
 			}
 
-			indicator := strings.TrimSpace(m[2])
-			reference := strings.TrimSpace(m[3])
-			description := strings.TrimSpace(m[4])
-			amountRaw := strings.TrimSpace(m[5])
-			balanceRaw := strings.TrimSpace(m[6])
-
-			direction := inferDirection(description)
-
-			current = &ParsedTransaction{
+			current = &parsers.ParsedTransaction{
 				AccountID:               accountID,
 				Date:                    normalizeDate(date),
-				Indicator:               indicator,
-				Reference:               reference,
-				Description:             description,
-				Direction:               direction,
-				Amount:                  normalizeAmount(amountRaw),
-				BalanceAfterTransaction: cleanBalance(balanceRaw),
+				Indicator:               strings.TrimSpace(m[2]),
+				Reference:               strings.TrimSpace(m[3]),
+				Description:             strings.TrimSpace(m[4]),
+				Direction:               inferDirection(strings.TrimSpace(m[4])),
+				Amount:                  normalizeAmount(strings.TrimSpace(m[5])),
+				BalanceAfterTransaction: cleanBalance(strings.TrimSpace(m[6])),
 			}
 			continue
 		}
@@ -153,21 +145,19 @@ func parsePage(page, accountID string) []ParsedTransaction {
 	return result
 }
 
-// tryParseDetailLine attempts to extract detail fields from a sub-line.
+// tryParseDetailLine attempts to extract a detail field from a sub-line.
 // Returns true if the line was consumed.
-func tryParseDetailLine(line string, tx *ParsedTransaction) bool {
+func tryParseDetailLine(line string, tx *parsers.ParsedTransaction) bool {
 	trimmed := strings.TrimSpace(line)
 
 	if m := reAmount1EUR.FindStringSubmatch(line); m != nil {
 		tx.Amount1 = strings.ReplaceAll(m[1], ",", ".")
 		return true
 	}
-
 	if m := reCardMasked.FindString(line); m != "" {
 		tx.CardMasked = m
 		return true
 	}
-
 	if m := reMCCLine.FindStringSubmatch(line); m != nil {
 		tx.MCCCode = m[1]
 		if m[2] != "" {
@@ -175,24 +165,22 @@ func tryParseDetailLine(line string, tx *ParsedTransaction) bool {
 		}
 		return true
 	}
-
 	if tx.MerchantIdentifier == "" && trimmed != "" && looksLikeMerchant(trimmed) {
 		tx.MerchantIdentifier = trimmed
 		return true
 	}
-
 	return false
 }
 
-// inferDirection determines Debit or Credit based on Greek description keywords.
+// inferDirection determines "debit" or "credit" based on Greek description keywords.
 func inferDirection(description string) string {
 	desc := strings.ToUpper(description)
 	for _, kw := range []string{"ΜΙΣΘΟΔΟΣΙΑ", "ΜΕΤΑΦΟΡΑ ΣΕ ΛΟΓ", "ΠΙΣΤΩΣΗ"} {
 		if strings.Contains(desc, kw) {
-			return "Credit"
+			return "credit"
 		}
 	}
-	return "Debit"
+	return "debit"
 }
 
 // normalizeDate converts dd/mm/yy → dd/mm/20yy.
@@ -216,8 +204,8 @@ func cleanBalance(s string) string {
 	return normalizeAmount(strings.TrimSpace(s))
 }
 
-// looksLikeMerchant returns true if the trimmed line looks like a merchant name
-// (not a number-only line, not a payment method keyword).
+// looksLikeMerchant returns true if the line looks like a merchant name
+// (not a pure number, not a payment-method keyword).
 func looksLikeMerchant(s string) bool {
 	if s == "" {
 		return false
@@ -226,13 +214,7 @@ func looksLikeMerchant(s string) bool {
 	if upper == "GOOGLE-PAY" || upper == "APPLE-PAY" {
 		return false
 	}
-	if reAmount1EUR.MatchString(s) {
-		return false
-	}
-	if reMCCLine.MatchString(s) {
-		return false
-	}
-	if reCardMasked.MatchString(s) {
+	if reAmount1EUR.MatchString(s) || reMCCLine.MatchString(s) || reCardMasked.MatchString(s) {
 		return false
 	}
 	for _, r := range s {

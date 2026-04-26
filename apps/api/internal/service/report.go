@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/manoskammas/finance-insights/apps/api/internal/repository"
+	"github.com/manoskammas/finance-insights/apps/api/internal/domain"
 )
 
 type reportStore interface {
-	SpendByPrimaryTag(ctx context.Context) ([]repository.TagSpend, error)
-	SpendBySecondaryTag(ctx context.Context) ([]repository.TagSpend, error)
-	MerchantsByMonth(ctx context.Context) ([]repository.MerchantMonthRow, error)
-	DailySpend(ctx context.Context) ([]repository.DailySpend, error)
+	SpendByPrimaryTag(ctx context.Context) ([]domain.TagSpend, error)
+	SpendBySecondaryTag(ctx context.Context) ([]domain.TagSpend, error)
+	MerchantsByMonth(ctx context.Context) ([]domain.MerchantMonthRow, error)
+	DailySpend(ctx context.Context) ([]domain.DailySpend, error)
 }
 
 // Report serves aggregate report queries.
@@ -25,7 +25,7 @@ func NewReport(repo reportStore) *Report {
 }
 
 // SpendByPrimaryTag returns debit totals by primary tag, descending by total.
-func (s *Report) SpendByPrimaryTag(ctx context.Context) ([]repository.TagSpend, error) {
+func (s *Report) SpendByPrimaryTag(ctx context.Context) ([]domain.TagSpend, error) {
 	rows, err := s.repo.SpendByPrimaryTag(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("spend by primary tag: %w", err)
@@ -34,7 +34,7 @@ func (s *Report) SpendByPrimaryTag(ctx context.Context) ([]repository.TagSpend, 
 }
 
 // SpendBySecondaryTag returns debit totals by secondary tag, descending by total.
-func (s *Report) SpendBySecondaryTag(ctx context.Context) ([]repository.TagSpend, error) {
+func (s *Report) SpendBySecondaryTag(ctx context.Context) ([]domain.TagSpend, error) {
 	rows, err := s.repo.SpendBySecondaryTag(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("spend by secondary tag: %w", err)
@@ -60,7 +60,7 @@ type MerchantSummary struct {
 }
 
 // DailySpend returns total debit spending per calendar day.
-func (s *Report) DailySpend(ctx context.Context) ([]repository.DailySpend, error) {
+func (s *Report) DailySpend(ctx context.Context) ([]domain.DailySpend, error) {
 	rows, err := s.repo.DailySpend(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("daily spend: %w", err)
@@ -76,7 +76,6 @@ func (s *Report) MerchantsByMonth(ctx context.Context) ([]MerchantSummary, error
 		return nil, fmt.Errorf("merchants by month: %w", err)
 	}
 
-	// Group flat rows by merchant identifier, preserving month order.
 	indexMap := map[string]int{}
 	var summaries []MerchantSummary
 
@@ -100,8 +99,6 @@ func (s *Report) MerchantsByMonth(ctx context.Context) ([]MerchantSummary, error
 		s.TxCount += row.Count
 	}
 
-	// Compute overall total spend per merchant as sum of monthly totals,
-	// then sort descending.
 	for i := range summaries {
 		summaries[i].TotalSpend = sumStrings(summaries[i].Months)
 	}
@@ -110,8 +107,6 @@ func (s *Report) MerchantsByMonth(ctx context.Context) ([]MerchantSummary, error
 	return summaries, nil
 }
 
-// sumStrings adds numeric string amounts from monthly rows.
-// We keep it as a formatted string with 2 decimal places.
 func sumStrings(months []MerchantMonthly) string {
 	var total float64
 	for _, m := range months {
