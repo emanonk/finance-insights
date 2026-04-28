@@ -12,12 +12,13 @@ RUN go mod download
 # Copy the rest of the API sources and build a static binary.
 COPY apps/api/ ./
 RUN CGO_ENABLED=0 GOOS=linux \
-    go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/server
+    go build -trimpath -ldflags="-s -w" -o /out/server ./cmd
 
 # Minimal runtime image.
 FROM alpine:3.20
 
-RUN apk add --no-cache ca-certificates tzdata \
+# poppler-utils provides pdftotext, required for PDF text extraction.
+RUN apk add --no-cache ca-certificates tzdata poppler-utils \
     && adduser -D -H -u 10001 app
 
 USER app

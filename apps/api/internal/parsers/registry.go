@@ -6,6 +6,7 @@ import "fmt"
 type ParseResult struct {
 	Transactions  []ParsedTransaction
 	ParserVersion string // e.g. "piraeus/v1"
+	AccountNumber string // bank account number extracted from the statement
 }
 
 // Registry holds all registered bank parsers grouped by bank name.
@@ -35,12 +36,20 @@ func (r *Registry) Parse(bankName, pdfPath string) (ParseResult, error) {
 	for _, p := range versions {
 		txs, err := p.Parse(pdfPath)
 		if err != nil {
+			fmt.Printf("[registry] parser %s/%s failed: %v\n", p.BankName(), p.Version(), err)
 			continue
 		}
-		return ParseResult{
+		result := ParseResult{
 			Transactions:  txs,
 			ParserVersion: fmt.Sprintf("%s/%s", p.BankName(), p.Version()),
-		}, nil
+		}
+		for _, tx := range txs {
+			if tx.AccountID != "" {
+				result.AccountNumber = tx.AccountID
+				break
+			}
+		}
+		return result, nil
 	}
 	return ParseResult{}, fmt.Errorf("all parsers for bank %q failed on %q", bankName, pdfPath)
 }

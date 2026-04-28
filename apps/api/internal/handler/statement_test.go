@@ -17,15 +17,15 @@ import (
 )
 
 type fakeStatementService struct {
-	gotAccountID int64
-	gotFileName  string
-	gotBody      []byte
-	result       service.IngestResult
-	err          error
+	gotBankName string
+	gotFileName string
+	gotBody     []byte
+	result      service.IngestResult
+	err         error
 }
 
-func (f *fakeStatementService) Ingest(_ context.Context, accountID int64, fileName string, r io.Reader) (service.IngestResult, error) {
-	f.gotAccountID = accountID
+func (f *fakeStatementService) Ingest(_ context.Context, bankName string, fileName string, r io.Reader) (service.IngestResult, error) {
+	f.gotBankName = bankName
 	f.gotFileName = fileName
 	body, err := io.ReadAll(r)
 	if err != nil {
@@ -61,19 +61,17 @@ func buildMultipart(t *testing.T, fieldName, fileName, contentType string, body 
 	return &buf, w.FormDataContentType()
 }
 
-// buildMultipartWithAccountID builds a multipart form that includes the file
-// part and an account_id text field.
-func buildMultipartWithAccountID(t *testing.T, accountID, fileName, contentType string, body []byte) (*bytes.Buffer, string) {
+// buildMultipartWithBankName builds a multipart form that includes the file
+// part and a bank_name text field.
+func buildMultipartWithBankName(t *testing.T, bankName, fileName, contentType string, body []byte) (*bytes.Buffer, string) {
 	t.Helper()
 	var buf bytes.Buffer
 	w := multipart.NewWriter(&buf)
 
-	// account_id text field
-	if err := w.WriteField(accountIDFormField, accountID); err != nil {
-		t.Fatalf("write account_id field: %v", err)
+	if err := w.WriteField(bankNameFormField, bankName); err != nil {
+		t.Fatalf("write bank_name field: %v", err)
 	}
 
-	// file part
 	header := make(textproto.MIMEHeader)
 	header.Set("Content-Disposition",
 		`form-data; name="file"; filename="`+fileName+`"`)
@@ -104,7 +102,7 @@ func TestStatementHandler_Create_HappyPath(t *testing.T) {
 	}
 	h := &Statement{Service: svc}
 
-	body, contentType := buildMultipartWithAccountID(t, "1", "statement.pdf", "application/pdf", []byte("%PDF-1.4\n%%EOF"))
+	body, contentType := buildMultipartWithBankName(t, "piraeus", "statement.pdf", "application/pdf", []byte("%PDF-1.4\n%%EOF"))
 	req := httptest.NewRequest(http.MethodPost, "/statements", body)
 	req.Header.Set("Content-Type", contentType)
 	rec := httptest.NewRecorder()
@@ -128,37 +126,19 @@ func TestStatementHandler_Create_HappyPath(t *testing.T) {
 	if svc.gotFileName != "statement.pdf" {
 		t.Errorf("service fileName = %q", svc.gotFileName)
 	}
-	if svc.gotAccountID != 1 {
-		t.Errorf("service accountID = %d, want 1", svc.gotAccountID)
+	if svc.gotBankName != "piraeus" {
+		t.Errorf("service bankName = %q, want piraeus", svc.gotBankName)
 	}
 }
 
-func TestStatementHandler_Create_MissingAccountID(t *testing.T) {
+func TestStatementHandler_Create_MissingBankName(t *testing.T) {
 	t.Parallel()
 
 	svc := &fakeStatementService{}
 	h := &Statement{Service: svc}
 
-	// build form without account_id
+	// build form without bank_name
 	body, contentType := buildMultipart(t, "file", "statement.pdf", "application/pdf", []byte("%PDF"))
-	req := httptest.NewRequest(http.MethodPost, "/statements", body)
-	req.Header.Set("Content-Type", contentType)
-	rec := httptest.NewRecorder()
-
-	h.Create(rec, req)
-
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want 400", rec.Code)
-	}
-}
-
-func TestStatementHandler_Create_InvalidAccountID(t *testing.T) {
-	t.Parallel()
-
-	svc := &fakeStatementService{}
-	h := &Statement{Service: svc}
-
-	body, contentType := buildMultipartWithAccountID(t, "abc", "statement.pdf", "application/pdf", []byte("%PDF"))
 	req := httptest.NewRequest(http.MethodPost, "/statements", body)
 	req.Header.Set("Content-Type", contentType)
 	rec := httptest.NewRecorder()
@@ -194,7 +174,7 @@ func TestStatementHandler_Create_NonPDFRejected(t *testing.T) {
 	svc := &fakeStatementService{}
 	h := &Statement{Service: svc}
 
-	body, contentType := buildMultipartWithAccountID(t, "1", "notes.txt", "text/plain", []byte("hello"))
+	body, contentType := buildMultipartWithBankName(t, "piraeus", "notes.txt", "text/plain", []byte("hello"))
 	req := httptest.NewRequest(http.MethodPost, "/statements", body)
 	req.Header.Set("Content-Type", contentType)
 	rec := httptest.NewRecorder()
@@ -229,7 +209,7 @@ func TestStatementHandler_Create_ServiceErrorReturns500(t *testing.T) {
 	svc := &fakeStatementService{err: errors.New("parser down")}
 	h := &Statement{Service: svc}
 
-	body, contentType := buildMultipartWithAccountID(t, "1", "s.pdf", "application/pdf", []byte("%PDF"))
+	body, contentType := buildMultipartWithBankName(t, "piraeus", "s.pdf", "application/pdf", []byte("%PDF"))
 	req := httptest.NewRequest(http.MethodPost, "/statements", body)
 	req.Header.Set("Content-Type", contentType)
 	rec := httptest.NewRecorder()

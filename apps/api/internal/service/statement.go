@@ -28,9 +28,10 @@ type statementParser interface {
 	Parse(bankName, pdfPath string) (parsers.ParseResult, error)
 }
 
-// bankLookup resolves the bank name for a given account id.
-type bankLookup interface {
-	BankName(ctx context.Context, accountID int64) (string, error)
+// accountResolver resolves the account id from a bank name and account number
+// extracted from the parsed statement.
+type accountResolver interface {
+	FindByBankAndNumber(ctx context.Context, bankName, accountNumber string) (int64, error)
 }
 
 // Statement orchestrates statement ingest: save the upload, parse it,
@@ -39,7 +40,7 @@ type Statement struct {
 	pool       *pgxpool.Pool
 	parser     statementParser
 	txs        transactionWriter
-	accounts   bankLookup
+	accounts   accountResolver
 	storageDir string
 }
 
@@ -48,7 +49,7 @@ func NewStatement(
 	pool *pgxpool.Pool,
 	p statementParser,
 	txs transactionWriter,
-	accounts bankLookup,
+	accounts accountResolver,
 	storageDir string,
 ) *Statement {
 	return &Statement{
@@ -67,14 +68,9 @@ type IngestResult struct {
 }
 
 // Ingest saves the uploaded PDF to disk, parses it with the bank's registered
-// parsers, and persists all parsed transactions in a single DB transaction.
-// accountID must be a valid FK into the accounts table.
-func (s *Statement) Ingest(ctx context.Context, accountID int64, fileName string, r io.Reader) (IngestResult, error) {
-	bankName, err := s.accounts.BankName(ctx, accountID)
-	if err != nil {
-		return IngestResult{}, fmt.Errorf("lookup account: %w", err)
-	}
-
+// parsers, resolves the account from the account number found in the statement,
+// and persists all parsed transactions in a single DB transaction.
+func (s *Statement) Ingest(ctx context.Context, bankName string, fileName string, r io.Reader) (IngestResult, error) {
 	storedPath, err := s.saveToDisk(fileName, r)
 	if err != nil {
 		return IngestResult{}, err
@@ -84,6 +80,12 @@ func (s *Statement) Ingest(ctx context.Context, accountID int64, fileName string
 	if err != nil {
 		_ = os.Remove(storedPath)
 		return IngestResult{}, fmt.Errorf("parse statement: %w", err)
+	}
+
+	accountID, err := s.accounts.FindByBankAndNumber(ctx, bankName, result.AccountNumber)
+	if err != nil {
+		_ = os.Remove(storedPath)
+		return IngestResult{}, fmt.Errorf("resolve account: %w", err)
 	}
 
 	domainTxs, err := toDomainTransactions(accountID, fileName, result.Transactions)

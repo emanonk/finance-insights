@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
 import {
   listTransactions,
   type Transaction,
@@ -9,14 +10,12 @@ import { CalendarView } from "./components/CalendarView";
 import { MerchantsView } from "./components/MerchantsView";
 import { ReportsView } from "./components/ReportsView";
 
-type Tab = "upload" | "transactions" | "calendar" | "merchants" | "reports";
-
-const TABS: { id: Tab; label: string }[] = [
-  { id: "upload", label: "Upload" },
-  { id: "transactions", label: "Transactions" },
-  { id: "calendar", label: "Calendar" },
-  { id: "merchants", label: "Merchants" },
-  { id: "reports", label: "Reports" },
+const TABS = [
+  { path: "/upload", label: "Upload" },
+  { path: "/transactions", label: "Transactions" },
+  { path: "/calendar", label: "Calendar" },
+  { path: "/merchants", label: "Merchants" },
+  { path: "/reports", label: "Reports" },
 ];
 
 interface State {
@@ -26,8 +25,7 @@ interface State {
   error: string | null;
 }
 
-function App() {
-  const [activeTab, setActiveTab] = useState<Tab>("upload");
+function TransactionsPage() {
   const [page, setPage] = useState(0);
   const [state, setState] = useState<State>({
     transactions: [],
@@ -56,14 +54,80 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === "transactions") {
-      load(page * PAGE_LIMIT);
-    }
-  }, [page, load, activeTab]);
+    load(page * PAGE_LIMIT);
+  }, [page, load]);
 
   const totalPages = Math.ceil(state.total / PAGE_LIMIT);
   const firstItem = state.total === 0 ? 0 : page * PAGE_LIMIT + 1;
   const lastItem = Math.min((page + 1) * PAGE_LIMIT, state.total);
+
+  return (
+    <>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900">Transactions</h2>
+          {!state.loading && !state.error && (
+            <p className="mt-0.5 text-sm text-gray-500">
+              {state.total === 0
+                ? "No transactions"
+                : `${firstItem}–${lastItem} of ${state.total}`}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {state.error && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {state.error}
+        </div>
+      )}
+
+      {state.loading ? (
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div
+              key={i}
+              className="flex gap-4 border-b border-gray-100 px-4 py-3 last:border-0"
+            >
+              <div className="h-4 w-20 animate-pulse rounded bg-gray-100" />
+              <div className="h-4 flex-1 animate-pulse rounded bg-gray-100" />
+              <div className="h-4 w-24 animate-pulse rounded bg-gray-100" />
+              <div className="h-4 w-20 animate-pulse rounded bg-gray-100" />
+              <div className="h-4 w-24 animate-pulse rounded bg-gray-100" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <TransactionTable transactions={state.transactions} />
+      )}
+
+      {!state.loading && totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-between">
+          <button
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
+            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+          >
+            ← Previous
+          </button>
+          <span className="text-sm text-gray-500">
+            Page {page + 1} of {totalPages}
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={page >= totalPages - 1}
+            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+          >
+            Next →
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
+function App() {
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -93,17 +157,19 @@ function App() {
           {/* Nav tabs */}
           <nav className="flex gap-1">
             {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? "bg-indigo-50 text-indigo-700"
-                    : "text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-                }`}
+              <NavLink
+                key={tab.path}
+                to={tab.path}
+                className={({ isActive }) =>
+                  `rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                    isActive
+                      ? "bg-indigo-50 text-indigo-700"
+                      : "text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                  }`
+                }
               >
                 {tab.label}
-              </button>
+              </NavLink>
             ))}
           </nav>
         </div>
@@ -111,78 +177,15 @@ function App() {
 
       {/* Main */}
       <main className="mx-auto max-w-6xl px-6 py-8">
-        {activeTab === "upload" ? (
-          <UploadView />
-        ) : activeTab === "calendar" ? (
-          <CalendarView />
-        ) : activeTab === "merchants" ? (
-          <MerchantsView />
-        ) : activeTab === "reports" ? (
-          <ReportsView />
-        ) : (
-          /* Transactions */
-          <>
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">Transactions</h2>
-                {!state.loading && !state.error && (
-                  <p className="mt-0.5 text-sm text-gray-500">
-                    {state.total === 0
-                      ? "No transactions"
-                      : `${firstItem}–${lastItem} of ${state.total}`}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {state.error && (
-              <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {state.error}
-              </div>
-            )}
-
-            {state.loading ? (
-              <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex gap-4 border-b border-gray-100 px-4 py-3 last:border-0"
-                  >
-                    <div className="h-4 w-20 animate-pulse rounded bg-gray-100" />
-                    <div className="h-4 flex-1 animate-pulse rounded bg-gray-100" />
-                    <div className="h-4 w-24 animate-pulse rounded bg-gray-100" />
-                    <div className="h-4 w-20 animate-pulse rounded bg-gray-100" />
-                    <div className="h-4 w-24 animate-pulse rounded bg-gray-100" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <TransactionTable transactions={state.transactions} />
-            )}
-
-            {!state.loading && totalPages > 1 && (
-              <div className="mt-6 flex items-center justify-between">
-                <button
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  disabled={page === 0}
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
-                >
-                  ← Previous
-                </button>
-                <span className="text-sm text-gray-500">
-                  Page {page + 1} of {totalPages}
-                </span>
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                  disabled={page >= totalPages - 1}
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
-                >
-                  Next →
-                </button>
-              </div>
-            )}
-          </>
-        )}
+        <Routes>
+          <Route path="/" element={<Navigate to="/upload" replace />} />
+          <Route path="/upload" element={<UploadView onImported={() => navigate("/transactions")} />} />
+          <Route path="/transactions" element={<TransactionsPage />} />
+          <Route path="/calendar" element={<CalendarView />} />
+          <Route path="/merchants" element={<MerchantsView />} />
+          <Route path="/reports" element={<ReportsView />} />
+          <Route path="*" element={<Navigate to="/upload" replace />} />
+        </Routes>
       </main>
     </div>
   );

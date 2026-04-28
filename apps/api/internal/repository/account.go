@@ -17,13 +17,15 @@ func NewAccountRepository(pool *pgxpool.Pool) *AccountRepository {
 	return &AccountRepository{pool: pool}
 }
 
-// BankName returns the bank_name for the given account id.
-func (r *AccountRepository) BankName(ctx context.Context, accountID int64) (string, error) {
-	var name string
+// FindByBankAndNumber returns the account id matching the given bank name and
+// account number as stored in the accounts table.
+func (r *AccountRepository) FindByBankAndNumber(ctx context.Context, bankName, accountNumber string) (int64, error) {
+	var id int64
 	if err := r.pool.QueryRow(ctx,
-		`SELECT bank_name FROM accounts WHERE id = $1`, accountID,
-	).Scan(&name); err != nil {
-		return "", fmt.Errorf("get account bank name: %w", err)
+		`SELECT id FROM accounts WHERE bank_name = $1 AND account_number = $2`,
+		bankName, accountNumber,
+	).Scan(&id); err != nil {
+		return 0, fmt.Errorf("find account by bank and number: %w", err)
 	}
-	return name, nil
+	return id, nil
 }

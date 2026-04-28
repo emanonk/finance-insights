@@ -16,7 +16,7 @@ type Config struct {
 func Load() (Config, error) {
 	cfg := Config{
 		HTTPAddr:    getenv("HTTP_ADDR", ":8080"),
-		DatabaseURL: os.Getenv("DATABASE_URL"),
+		DatabaseURL: getenv("DATABASE_URL", "postgres://finance:finance@localhost:5432/finance_insights?sslmode=disable"),
 		StorageDir:  getenv("STORAGE_DIR", "storage"),
 	}
 	if cfg.HTTPAddr == "" {
