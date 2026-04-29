@@ -2,12 +2,10 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -143,100 +141,27 @@ func (s *Statement) persist(ctx context.Context, txs []domain.Transaction) error
 }
 
 // toDomainTransactions converts parser output into domain transactions.
-// Transactions missing required fields are skipped; malformed values fail fast.
+// Transactions missing a date, direction, or non-zero amount are skipped.
 func toDomainTransactions(accountID int64, fileName string, parsed []parsers.ParsedTransaction) ([]domain.Transaction, error) {
 	out := make([]domain.Transaction, 0, len(parsed))
-	for i, p := range parsed {
-		if strings.TrimSpace(p.Date) == "" ||
-			strings.TrimSpace(p.Direction) == "" ||
-			strings.TrimSpace(p.Amount) == "" ||
-			strings.TrimSpace(p.Description) == "" {
+	for _, p := range parsed {
+		if p.Date.IsZero() || strings.TrimSpace(p.Direction) == "" || p.Amount == 0 {
 			continue
 		}
-
-		date, err := parseDate(p.Date)
-		if err != nil {
-			return nil, fmt.Errorf("transaction #%d date %q: %w", i, p.Date, err)
-		}
-		amount, err := normalizeAmountString(p.Amount)
-		if err != nil {
-			return nil, fmt.Errorf("transaction #%d amount %q: %w", i, p.Amount, err)
-		}
-
-		desc := p.Description
 		t := domain.Transaction{
-			AccountID:           accountID,
-			Date:                date,
-			BankReferenceNumber: nullableString(p.BankReferenceNumber),
-			Justification:       nullableString(p.Justification),
-			Indicator:           nullableString(p.Indicator),
-			MerchantIdentifier:  nullableString(p.MerchantIdentifier),
-			MCCCode:             nullableString(p.MCCCode),
-			CardMasked:          nullableString(p.CardMasked),
-			Reference:           nullableString(p.Reference),
-			Description:         &desc,
-			PaymentMethod:       nullableString(p.PaymentMethod),
-			Direction:           strings.ToLower(p.Direction),
-			Amount:              amount,
-			StatementFileName:   &fileName,
+			AccountID:            accountID,
+			Date:                 p.Date,
+			BankReference:        p.BankReference,
+			TransactionReference: p.TransactionReference,
+			MerchantIdentifier:   p.MerchantIdentifier,
+			BalanceBefore:        p.BalanceBefore,
+			BalanceAfter:         p.BalanceAfter,
+			Amount:               p.Amount,
+			Direction:            strings.ToLower(p.Direction),
+			RawData:              p.RawData,
+			StatementFileName:    &fileName,
 		}
-
-		if a1, ok, err := optionalAmount(p.Amount1); err != nil {
-			return nil, fmt.Errorf("transaction #%d amount1 %q: %w", i, p.Amount1, err)
-		} else if ok {
-			t.Amount1 = &a1
-		}
-
-		if balance, ok, err := optionalAmount(p.BalanceAfterTransaction); err != nil {
-			return nil, fmt.Errorf("transaction #%d balance %q: %w", i, p.BalanceAfterTransaction, err)
-		} else if ok {
-			t.BalanceAfterTransaction = &balance
-		}
-
 		out = append(out, t)
 	}
 	return out, nil
-}
-
-// parseDate accepts dd/mm/yyyy (parser output) or ISO YYYY-MM-DD.
-func parseDate(s string) (time.Time, error) {
-	s = strings.TrimSpace(s)
-	for _, layout := range []string{"02/01/2006", "2006-01-02"} {
-		if t, err := time.Parse(layout, s); err == nil {
-			return t.UTC(), nil
-		}
-	}
-	return time.Time{}, errors.New("unrecognized date format")
-}
-
-// normalizeAmountString ensures the parser-provided amount is a valid decimal
-// expressible as numeric(14,2). It returns the canonical dot-decimal form.
-func normalizeAmountString(s string) (string, error) {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return "", errors.New("empty amount")
-	}
-	if _, err := strconv.ParseFloat(s, 64); err != nil {
-		return "", fmt.Errorf("not a number: %w", err)
-	}
-	return s, nil
-}
-
-func optionalAmount(s string) (string, bool, error) {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return "", false, nil
-	}
-	a, err := normalizeAmountString(s)
-	if err != nil {
-		return "", false, err
-	}
-	return a, true, nil
-}
-
-func nullableString(s string) *string {
-	if strings.TrimSpace(s) == "" {
-		return nil
-	}
-	return &s
 }

@@ -73,9 +73,8 @@ func TestTransactionService_List_ClampsLimitAndOffset(t *testing.T) {
 func TestTransactionService_List_ReturnsItems(t *testing.T) {
 	t.Parallel()
 
-	desc := "one"
 	repo := &fakeTransactionRepo{
-		items: []domain.Transaction{{ID: 1, Description: &desc, Direction: "debit", Amount: "10.00"}},
+		items: []domain.Transaction{{ID: 1, Direction: "debit", Amount: 1000}},
 		total: 42,
 	}
 	svc := NewTransaction(repo)

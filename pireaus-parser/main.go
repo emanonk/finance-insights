@@ -23,30 +23,12 @@ type Transaction struct {
 	RawData              []string  `json:"rawData"`
 }
 
-type ParsedTransaction struct {
-	AccountID               string //v
-	Date                    string //v
-	BankReferenceNumber     string //v
-	Justification           string
-	Indicator               string
-	MerchantIdentifier      string //o
-	Amount1                 string //v
-	MCCCode                 string
-	CardMasked              string
-	Reference               string
-	Description             string
-	PaymentMethod           string
-	Direction               string //v
-	Amount                  string //v
-	BalanceAfterTransaction string //v
-}
-
 func main() {
 	// if len(os.Args) < 2 {
 	// 	panic("usage: go run main.go statement.pdf")
 	// }
 
-	statementPath := "Statements (2).pdf"
+	statementPath := "Statements (4).pdf"
 
 	// rawBytes, err := os.ReadFile(statementPath)
 	// if err != nil {

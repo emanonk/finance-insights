@@ -91,16 +91,14 @@ func TestTransactionHandler_List_SerializesDTO(t *testing.T) {
 	t.Parallel()
 
 	merchant := "STARBUCKS"
-	desc := "CARD PURCHASE"
 	svc := &fakeTransactionService{
 		result: service.ListResult{
 			Items: []domain.Transaction{{
 				ID:                 42,
 				AccountID:          1,
 				Date:               time.Date(2024, 7, 8, 0, 0, 0, 0, time.UTC),
-				Description:        &desc,
 				Direction:          "debit",
-				Amount:             "71.49",
+				Amount:             7149,
 				MerchantIdentifier: &merchant,
 			}},
 			Total:  1,
@@ -128,8 +126,8 @@ func TestTransactionHandler_List_SerializesDTO(t *testing.T) {
 	if item.Date != "2024-07-08" {
 		t.Errorf("date = %q, want 2024-07-08", item.Date)
 	}
-	if item.Amount != "71.49" {
-		t.Errorf("amount = %q, want 71.49", item.Amount)
+	if item.Amount != 7149 {
+		t.Errorf("amount = %d, want 7149", item.Amount)
 	}
 	if item.AccountID != 1 {
 		t.Errorf("accountId = %d, want 1", item.AccountID)

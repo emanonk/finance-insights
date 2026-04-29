@@ -6,8 +6,8 @@
       "type": "go",
       "request": "launch",
       "mode": "auto",
-      // "program": "${workspaceFolder}/apps/api/cmd/main.go",
-      "program": "${workspaceFolder}/pireaus-parser/main.go",
+      "program": "${workspaceFolder}/apps/api/cmd/main.go",
+      // "program": "${workspaceFolder}/pireaus-parser/main.go",
       // "envFile": "${workspaceFolder}/apps/api/.env.local"
     }
   ]

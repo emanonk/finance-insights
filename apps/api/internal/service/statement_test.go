@@ -9,21 +9,21 @@ import (
 
 const testAccountID int64 = 1
 
+func ptr(s string) *string { return &s }
+
 func TestToDomainTransactions_ValidRow(t *testing.T) {
 	t.Parallel()
 
+	date := time.Date(2024, 7, 8, 0, 0, 0, 0, time.UTC)
 	parsed := []parsers.ParsedTransaction{
 		{
-			Date:                    "08/07/2024",
-			Description:             "CARD PURCHASE",
-			Direction:               "Debit",
-			Amount:                  "71.49",
-			BalanceAfterTransaction: "1987.26",
-			MerchantIdentifier:      "SOME MERCHANT",
-			MCCCode:                 "5411",
-			Justification:           "justification text",
-			Indicator:               "D",
-			Amount1:                 "71.49",
+			Date:               date,
+			Direction:          "debit",
+			Amount:             7149,
+			BalanceBefore:      198726,
+			BalanceAfter:       191577,
+			MerchantIdentifier: ptr("SOME MERCHANT"),
+			BankReference:      ptr("2960 EL01P 0442174"),
 		},
 	}
 
@@ -38,27 +38,17 @@ func TestToDomainTransactions_ValidRow(t *testing.T) {
 	if got.AccountID != testAccountID {
 		t.Errorf("AccountID = %v, want %v", got.AccountID, testAccountID)
 	}
-	wantDate := time.Date(2024, 7, 8, 0, 0, 0, 0, time.UTC)
-	if !got.Date.Equal(wantDate) {
-		t.Errorf("Date = %v, want %v", got.Date, wantDate)
+	if !got.Date.Equal(date) {
+		t.Errorf("Date = %v, want %v", got.Date, date)
 	}
-	if got.Amount != "71.49" {
-		t.Errorf("Amount = %q, want %q", got.Amount, "71.49")
+	if got.Amount != 7149 {
+		t.Errorf("Amount = %d, want 7149", got.Amount)
 	}
-	if got.BalanceAfterTransaction == nil || *got.BalanceAfterTransaction != "1987.26" {
-		t.Errorf("Balance = %v, want 1987.26", got.BalanceAfterTransaction)
+	if got.BalanceAfter != 191577 {
+		t.Errorf("BalanceAfter = %d, want 191577", got.BalanceAfter)
 	}
 	if got.MerchantIdentifier == nil || *got.MerchantIdentifier != "SOME MERCHANT" {
 		t.Errorf("MerchantIdentifier = %v", got.MerchantIdentifier)
-	}
-	if got.Justification == nil || *got.Justification != "justification text" {
-		t.Errorf("Justification = %v", got.Justification)
-	}
-	if got.Indicator == nil || *got.Indicator != "D" {
-		t.Errorf("Indicator = %v", got.Indicator)
-	}
-	if got.Amount1 == nil || *got.Amount1 != "71.49" {
-		t.Errorf("Amount1 = %v", got.Amount1)
 	}
 	if got.StatementFileName == nil || *got.StatementFileName != "statement.pdf" {
 		t.Errorf("StatementFileName = %v", got.StatementFileName)
@@ -68,11 +58,11 @@ func TestToDomainTransactions_ValidRow(t *testing.T) {
 func TestToDomainTransactions_SkipsIncompleteRows(t *testing.T) {
 	t.Parallel()
 
+	date := time.Date(2024, 7, 8, 0, 0, 0, 0, time.UTC)
 	parsed := []parsers.ParsedTransaction{
-		{Date: "", Description: "no date", Direction: "Debit", Amount: "1"},
-		{Date: "08/07/2024", Description: "", Direction: "Debit", Amount: "1"},
-		{Date: "08/07/2024", Description: "no amount", Direction: "Debit", Amount: ""},
-		{Date: "08/07/2024", Description: "no dir", Direction: "", Amount: "1"},
+		{Date: time.Time{}, Direction: "debit", Amount: 100},   // zero date → skip
+		{Date: date, Direction: "", Amount: 100},               // no direction → skip
+		{Date: date, Direction: "debit", Amount: 0},            // zero amount → skip
 	}
 	out, err := toDomainTransactions(testAccountID, "s.pdf", parsed)
 	if err != nil {
@@ -80,44 +70,5 @@ func TestToDomainTransactions_SkipsIncompleteRows(t *testing.T) {
 	}
 	if len(out) != 0 {
 		t.Errorf("expected 0 rows (all incomplete), got %d", len(out))
-	}
-}
-
-func TestToDomainTransactions_InvalidAmountFails(t *testing.T) {
-	t.Parallel()
-
-	parsed := []parsers.ParsedTransaction{
-		{Date: "08/07/2024", Description: "bad", Direction: "Debit", Amount: "not-a-number"},
-	}
-	if _, err := toDomainTransactions(testAccountID, "s.pdf", parsed); err == nil {
-		t.Fatal("expected error for invalid amount, got nil")
-	}
-}
-
-func TestToDomainTransactions_InvalidDateFails(t *testing.T) {
-	t.Parallel()
-
-	parsed := []parsers.ParsedTransaction{
-		{Date: "bad-date", Description: "bad", Direction: "Debit", Amount: "1.00"},
-	}
-	if _, err := toDomainTransactions(testAccountID, "s.pdf", parsed); err == nil {
-		t.Fatal("expected error for invalid date, got nil")
-	}
-}
-
-func TestParseDate_AcceptsBothLayouts(t *testing.T) {
-	t.Parallel()
-
-	cases := []string{"08/07/2024", "2024-07-08"}
-	want := time.Date(2024, 7, 8, 0, 0, 0, 0, time.UTC)
-	for _, s := range cases {
-		got, err := parseDate(s)
-		if err != nil {
-			t.Errorf("parseDate(%q) error = %v", s, err)
-			continue
-		}
-		if !got.Equal(want) {
-			t.Errorf("parseDate(%q) = %v, want %v", s, got, want)
-		}
 	}
 }

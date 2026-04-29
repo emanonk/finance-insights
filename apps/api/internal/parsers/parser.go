@@ -1,25 +1,20 @@
 // Package parsers defines the shared interfaces and types for bank statement parsers.
 package parsers
 
-// ParsedTransaction is the raw, unnormalized output of any bank statement parser.
-// Fields are strings to preserve the source representation; normalization to domain
-// types happens in the service layer.
+import "time"
+
+// ParsedTransaction is the normalized output of any bank statement parser.
 type ParsedTransaction struct {
-	AccountID               string
-	Date                    string
-	BankReferenceNumber     string
-	Justification           string
-	Indicator               string
-	MerchantIdentifier      string
-	Amount1                 string
-	MCCCode                 string
-	CardMasked              string
-	Reference               string
-	Description             string
-	PaymentMethod           string
-	Direction               string
-	Amount                  string
-	BalanceAfterTransaction string
+	AccountID            string
+	Date                 time.Time
+	BankReference        *string
+	TransactionReference *string
+	MerchantIdentifier   *string
+	BalanceBefore        int
+	BalanceAfter         int
+	Amount               int
+	Direction            string // "debit" or "credit"
+	RawData              []string
 }
 
 // BankParser is implemented by each versioned parser for a specific bank.

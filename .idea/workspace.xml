@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="1c19eb14-54ab-4504-b576-0d6fd89b5ed4" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/aead4f90-59b0-4dd5-b43d-f2302db2f705.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/aead4f90-59b0-4dd5-b43d-f2302db2f705/storage_v2/_src_/database/finance_insights.oE6ykQ.meta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/aead4f90-59b0-4dd5-b43d-f2302db2f705/storage_v2/_src_/database/finance_insights.oE6ykQ/schema/information_schema.FNRwLQ.meta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/aead4f90-59b0-4dd5-b43d-f2302db2f705/storage_v2/_src_/database/finance_insights.oE6ykQ/schema/pg_catalog.0S1ZNQ.meta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/aead4f90-59b0-4dd5-b43d-f2302db2f705/storage_v2/_src_/database/finance_insights.oE6ykQ/schema/public.abK9xQ.meta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.vscode/launch.json" beforeDir="false" afterPath="$PROJECT_DIR$/.vscode/launch.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/api/internal/domain/transaction.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/domain/transaction.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/api/internal/handler/transaction.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/handler/transaction.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/api/internal/handler/transaction_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/handler/transaction_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/api/internal/parsers/parser.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/parsers/parser.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/api/internal/parsers/piraeus/v1/parser.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/parsers/piraeus/v1/parser.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/api/internal/repository/transaction.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/repository/transaction.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/api/internal/service/statement.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/service/statement.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/api/internal/service/statement_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/service/statement_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/api/internal/service/transaction_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/service/transaction_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pireaus-parser/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/pireaus-parser/main.go" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 8,
+  "fromUser": false
+}]]></component>
+  <component name="ProjectId" id="3D0AcPfB9d4Yc8Y6Gt6tBDxhmoy" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "main",
+    "ignore.virus.scanning.warn.message": "true",
+    "last_opened_file_path": "F:/2-1-git/finance-insights"
+  },
+  "keyToStringList": {
+    "DatabaseDriversLRU": [
+      "postgresql"
+    ]
+  }
+}]]></component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="1c19eb14-54ab-4504-b576-0d6fd89b5ed4" name="Changes" comment="" />
+      <created>1777408694980</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1777408694980</updated>
+    </task>
+    <servers />
+  </component>
+</project>
