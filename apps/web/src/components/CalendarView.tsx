@@ -1,19 +1,17 @@
 import { useEffect, useState } from "react";
 import { getDailySpend } from "../api/reports";
+import { penceCompact, penceToPounds } from "../lib/money";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+// fmt shows a compact pence value (e.g. "£12" or "£1.2k") for calendar cells.
 function fmt(value: string): string {
-  const n = parseFloat(value);
-  if (isNaN(n)) return "—";
-  if (n >= 1000) return `€${(n / 1000).toFixed(1)}k`;
-  return `€${n.toFixed(0)}`;
+  return penceCompact(value);
 }
 
+// fmtFull shows a precise pounds value for the tooltip.
 function fmtFull(value: string): string {
-  const n = parseFloat(value);
-  if (isNaN(n)) return "—";
-  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return penceToPounds(value);
 }
 
 // Returns 0=Mon … 6=Sun offset for day 1 of a month

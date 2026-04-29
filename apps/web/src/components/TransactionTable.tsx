@@ -1,4 +1,5 @@
 import { type Transaction } from "../api/transactions";
+import { penceToDisplay } from "../lib/money";
 
 interface Props {
   transactions: Transaction[];
@@ -12,9 +13,9 @@ function amountClass(direction: string): string {
     : "text-red-500 font-medium";
 }
 
-function formatAmount(amount: string, direction: string): string {
+function formatAmount(amount: number, direction: string): string {
   const prefix = direction === "credit" ? "+" : "-";
-  return `${prefix}${amount}`;
+  return `${prefix}£${penceToDisplay(amount)}`;
 }
 
 export function TransactionTable({ transactions }: Props) {
@@ -51,9 +52,6 @@ export function TransactionTable({ transactions }: Props) {
             <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase tracking-wide text-xs">
               Description
             </th>
-            <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase tracking-wide text-xs">
-              Method
-            </th>
             <th className="px-4 py-3 text-right font-semibold text-gray-500 uppercase tracking-wide text-xs">
               Amount
             </th>
@@ -69,10 +67,7 @@ export function TransactionTable({ transactions }: Props) {
                 {t.date}
               </td>
               <td className="px-4 py-3 text-gray-800 max-w-xs truncate">
-                {t.description || t.justification || t.merchantIdentifier || "—"}
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap text-gray-500">
-                {t.paymentMethod ?? "—"}
+                {t.transactionReference || t.merchantIdentifier || "—"}
               </td>
               <td
                 className={`px-4 py-3 whitespace-nowrap text-right tabular-nums ${amountClass(t.direction)}`}
@@ -80,7 +75,7 @@ export function TransactionTable({ transactions }: Props) {
                 {formatAmount(t.amount, t.direction)}
               </td>
               <td className="px-4 py-3 whitespace-nowrap text-right text-gray-500 tabular-nums">
-                {t.balanceAfterTransaction ?? "—"}
+                £{penceToDisplay(t.balanceAfter)}
               </td>
             </tr>
           ))}

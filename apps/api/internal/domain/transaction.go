@@ -5,7 +5,7 @@ import "time"
 // Transaction is a normalized financial record parsed from a bank statement.
 type Transaction struct {
 	ID                   int64
-	AccountID            int64
+	AccountID            string
 	Date                 time.Time
 	BankReference        *string
 	TransactionReference *string

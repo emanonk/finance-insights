@@ -6,13 +6,13 @@ import {
   type TagSpend,
   type MerchantSummary,
 } from "../api/reports";
+import { penceToPounds } from "../lib/money";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+// fmt formats a pence string value as a pounds display string.
 function fmt(value: string): string {
-  const n = parseFloat(value);
-  if (isNaN(n)) return value;
-  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return penceToPounds(value);
 }
 
 function Skeleton() {

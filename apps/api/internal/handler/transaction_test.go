@@ -95,7 +95,7 @@ func TestTransactionHandler_List_SerializesDTO(t *testing.T) {
 		result: service.ListResult{
 			Items: []domain.Transaction{{
 				ID:                 42,
-				AccountID:          1,
+				AccountID:          "1",
 				Date:               time.Date(2024, 7, 8, 0, 0, 0, 0, time.UTC),
 				Direction:          "debit",
 				Amount:             7149,
@@ -129,8 +129,8 @@ func TestTransactionHandler_List_SerializesDTO(t *testing.T) {
 	if item.Amount != 7149 {
 		t.Errorf("amount = %d, want 7149", item.Amount)
 	}
-	if item.AccountID != 1 {
-		t.Errorf("accountId = %d, want 1", item.AccountID)
+	if item.AccountID != "1" {
+		t.Errorf("accountId = %q, want %q", item.AccountID, "1")
 	}
 }
 

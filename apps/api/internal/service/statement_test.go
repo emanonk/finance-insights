@@ -7,7 +7,7 @@ import (
 	"github.com/manoskammas/finance-insights/apps/api/internal/parsers"
 )
 
-const testAccountID int64 = 1
+const testAccountID = "acc-001"
 
 func ptr(s string) *string { return &s }
 

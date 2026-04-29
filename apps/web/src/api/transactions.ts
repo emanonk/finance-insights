@@ -1,20 +1,15 @@
 export interface Transaction {
   id: string;
-  accountId: number;
+  accountId: string;
   date: string;
-  bankReferenceNumber: string | null;
-  justification: string | null;
-  indicator: string | null;
+  bankReference: string | null;
+  transactionReference: string | null;
   merchantIdentifier: string | null;
-  amount1: string | null;
-  mccCode: string | null;
-  cardMasked: string | null;
-  reference: string | null;
-  description: string;
-  paymentMethod: string | null;
+  balanceBefore: number;
+  balanceAfter: number;
+  amount: number;
   direction: string;
-  amount: string;
-  balanceAfterTransaction: string | null;
+  rawData: string[] | null;
   statementFileName: string | null;
 }
 

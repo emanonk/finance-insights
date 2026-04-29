@@ -23,7 +23,7 @@ type Transaction struct {
 // transactionDTO is the transport shape of a transaction.
 type transactionDTO struct {
 	ID                   string   `json:"id"`
-	AccountID            int64    `json:"accountId"`
+	AccountID            string   `json:"accountId"`
 	Date                 string   `json:"date"`
 	BankReference        *string  `json:"bankReference"`
 	TransactionReference *string  `json:"transactionReference"`

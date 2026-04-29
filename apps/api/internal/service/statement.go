@@ -26,10 +26,10 @@ type statementParser interface {
 	Parse(bankName, pdfPath string) (parsers.ParseResult, error)
 }
 
-// accountResolver resolves the account id from a bank name and account number
-// extracted from the parsed statement.
+// accountResolver finds or creates an account for the given bank name and
+// account number, returning the account id.
 type accountResolver interface {
-	FindByBankAndNumber(ctx context.Context, bankName, accountNumber string) (int64, error)
+	FindOrCreate(ctx context.Context, bankName, accountNumber string) (string, error)
 }
 
 // Statement orchestrates statement ingest: save the upload, parse it,
@@ -80,7 +80,7 @@ func (s *Statement) Ingest(ctx context.Context, bankName string, fileName string
 		return IngestResult{}, fmt.Errorf("parse statement: %w", err)
 	}
 
-	accountID, err := s.accounts.FindByBankAndNumber(ctx, bankName, result.AccountNumber)
+	accountID, err := s.accounts.FindOrCreate(ctx, bankName, result.AccountNumber)
 	if err != nil {
 		_ = os.Remove(storedPath)
 		return IngestResult{}, fmt.Errorf("resolve account: %w", err)
@@ -142,7 +142,8 @@ func (s *Statement) persist(ctx context.Context, txs []domain.Transaction) error
 
 // toDomainTransactions converts parser output into domain transactions.
 // Transactions missing a date, direction, or non-zero amount are skipped.
-func toDomainTransactions(accountID int64, fileName string, parsed []parsers.ParsedTransaction) ([]domain.Transaction, error) {
+// accountID is the resolved DB account id and overrides whatever the parser set.
+func toDomainTransactions(accountID, fileName string, parsed []parsers.ParsedTransaction) ([]domain.Transaction, error) {
 	out := make([]domain.Transaction, 0, len(parsed))
 	for _, p := range parsed {
 		if p.Date.IsZero() || strings.TrimSpace(p.Direction) == "" || p.Amount == 0 {
