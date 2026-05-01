@@ -54,6 +54,7 @@ func main() {
 
 	sys := service.NewSystem()
 	statementSvc := service.NewStatement(pool, registry, transactionRepo, accountRepo, cfg.StorageDir)
+	accountSvc := service.NewAccount(accountRepo)
 	transactionSvc := service.NewTransaction(transactionRepo)
 	merchantSvc := service.NewMerchant(merchantRepo)
 	reportSvc := service.NewReport(reportRepo)
@@ -61,6 +62,7 @@ func main() {
 	handler := server.NewRouter(server.Deps{
 		System:      sys,
 		Statement:   statementSvc,
+		Account:     accountSvc,
 		Transaction: transactionSvc,
 		Merchant:    merchantSvc,
 		Report:      reportSvc,

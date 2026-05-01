@@ -3,16 +3,17 @@ package handler
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/manoskammas/finance-insights/apps/api/internal/domain"
 	"github.com/manoskammas/finance-insights/apps/api/internal/service"
 )
 
 type reportService interface {
-	SpendByPrimaryTag(ctx context.Context) ([]domain.TagSpend, error)
-	SpendBySecondaryTag(ctx context.Context) ([]domain.TagSpend, error)
-	MerchantsByMonth(ctx context.Context) ([]service.MerchantSummary, error)
-	DailySpend(ctx context.Context) ([]domain.DailySpend, error)
+	SpendByPrimaryTag(ctx context.Context, accountIDs []string) ([]domain.TagSpend, error)
+	SpendBySecondaryTag(ctx context.Context, accountIDs []string) ([]domain.TagSpend, error)
+	MerchantsByMonth(ctx context.Context, accountIDs []string) ([]service.MerchantSummary, error)
+	DailySpend(ctx context.Context, accountIDs []string) ([]domain.DailySpend, error)
 }
 
 // Report serves report endpoints.
@@ -51,11 +52,27 @@ type merchantsByMonthResponse struct {
 	Items []merchantSummaryDTO `json:"items"`
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+func parseAccountIDs(r *http.Request) []string {
+	raw := r.URL.Query().Get("accountIds")
+	if raw == "" {
+		return nil
+	}
+	var ids []string
+	for _, id := range strings.Split(raw, ",") {
+		if id = strings.TrimSpace(id); id != "" {
+			ids = append(ids, id)
+		}
+	}
+	return ids
+}
+
 // ── Handlers ──────────────────────────────────────────────────────────────────
 
 // SpendByPrimaryTag handles GET /reports/spend-by-primary-tag.
 func (h *Report) SpendByPrimaryTag(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.Service.SpendByPrimaryTag(r.Context())
+	rows, err := h.Service.SpendByPrimaryTag(r.Context(), parseAccountIDs(r))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to load primary tag report")
 		return
@@ -69,7 +86,7 @@ func (h *Report) SpendByPrimaryTag(w http.ResponseWriter, r *http.Request) {
 
 // SpendBySecondaryTag handles GET /reports/spend-by-secondary-tag.
 func (h *Report) SpendBySecondaryTag(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.Service.SpendBySecondaryTag(r.Context())
+	rows, err := h.Service.SpendBySecondaryTag(r.Context(), parseAccountIDs(r))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to load secondary tag report")
 		return
@@ -92,7 +109,7 @@ type dailySpendResponse struct {
 
 // DailySpend handles GET /reports/daily-spend.
 func (h *Report) DailySpend(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.Service.DailySpend(r.Context())
+	rows, err := h.Service.DailySpend(r.Context(), parseAccountIDs(r))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to load daily spend")
 		return
@@ -106,7 +123,7 @@ func (h *Report) DailySpend(w http.ResponseWriter, r *http.Request) {
 
 // MerchantsByMonth handles GET /reports/merchants-by-month.
 func (h *Report) MerchantsByMonth(w http.ResponseWriter, r *http.Request) {
-	summaries, err := h.Service.MerchantsByMonth(r.Context())
+	summaries, err := h.Service.MerchantsByMonth(r.Context(), parseAccountIDs(r))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to load merchant monthly report")
 		return

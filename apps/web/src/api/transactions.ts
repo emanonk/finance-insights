@@ -22,12 +22,16 @@ export interface TransactionListResponse {
 
 export async function listTransactions(
   limit: number,
-  offset: number
+  offset: number,
+  accountIds?: string[]
 ): Promise<TransactionListResponse> {
   const params = new URLSearchParams({
     limit: String(limit),
     offset: String(offset),
   });
+  if (accountIds && accountIds.length > 0) {
+    params.set("accountIds", accountIds.join(","));
+  }
   const res = await fetch(`/api/transactions?${params}`);
   if (!res.ok) {
     throw new Error(`Failed to fetch transactions: ${res.status}`);

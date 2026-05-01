@@ -1,30 +1,28 @@
 import { useEffect, useState } from "react";
 import { getDailySpend } from "../api/reports";
+import { type Account } from "../api/accounts";
+import { AccountSelector } from "./AccountSelector";
 import { penceCompact, penceToPounds } from "../lib/money";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-// fmt shows a compact pence value (e.g. "£12" or "£1.2k") for calendar cells.
 function fmt(value: string): string {
   return penceCompact(value);
 }
 
-// fmtFull shows a precise pounds value for the tooltip.
 function fmtFull(value: string): string {
   return penceToPounds(value);
 }
 
-// Returns 0=Mon … 6=Sun offset for day 1 of a month
 function monthStartOffset(year: number, month: number): number {
-  const d = new Date(year, month - 1, 1).getDay(); // 0=Sun
-  return (d + 6) % 7; // shift so Mon=0
+  const d = new Date(year, month - 1, 1).getDay();
+  return (d + 6) % 7;
 }
 
 function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
 }
 
-// Heat-map: returns a Tailwind bg class based on intensity 0..1
 function heatClass(intensity: number): string {
   if (intensity === 0) return "";
   if (intensity < 0.15) return "bg-indigo-50";
@@ -43,19 +41,28 @@ function amountTextClass(intensity: number): string {
   return intensity >= 0.7 ? "text-indigo-100" : "text-indigo-600";
 }
 
-export function CalendarView() {
+interface CalendarViewProps {
+  accounts: Account[];
+  selectedAccountIds: string[];
+  onAccountsChange: (ids: string[]) => void;
+}
+
+export function CalendarView({ accounts, selectedAccountIds, onAccountsChange }: CalendarViewProps) {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1); // 1-based
+  const [month, setMonth] = useState(now.getMonth() + 1);
   const [spendMap, setSpendMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{ day: number; total: string } | null>(null);
 
+  const filterKey = selectedAccountIds.join(",");
+  const accountIds = selectedAccountIds.length > 0 ? selectedAccountIds : undefined;
+
   useEffect(() => {
     setLoading(true);
     setError(null);
-    getDailySpend()
+    getDailySpend(accountIds)
       .then((res) => {
         const map: Record<string, string> = {};
         for (const d of res.items) map[d.date] = d.total;
@@ -63,22 +70,21 @@ export function CalendarView() {
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Unexpected error"))
       .finally(() => setLoading(false));
-  }, []);
+  }, [filterKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function prevMonth() {
-    if (month === 1) { setYear(y => y - 1); setMonth(12); }
-    else setMonth(m => m - 1);
+    if (month === 1) { setYear((y) => y - 1); setMonth(12); }
+    else setMonth((m) => m - 1);
   }
   function nextMonth() {
-    if (month === 12) { setYear(y => y + 1); setMonth(1); }
-    else setMonth(m => m + 1);
+    if (month === 12) { setYear((y) => y + 1); setMonth(1); }
+    else setMonth((m) => m + 1);
   }
 
   const label = new Date(year, month - 1, 1).toLocaleString("en-US", { month: "long", year: "numeric" });
   const offset = monthStartOffset(year, month);
   const days = daysInMonth(year, month);
 
-  // Collect spend values for this month to compute heat-map scale.
   const monthValues: number[] = [];
   for (let d = 1; d <= days; d++) {
     const key = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -86,11 +92,8 @@ export function CalendarView() {
     if (v) monthValues.push(parseFloat(v) || 0);
   }
   const maxVal = monthValues.length ? Math.max(...monthValues) : 1;
-
-  // Monthly total
   const monthTotal = monthValues.reduce((a, b) => a + b, 0);
 
-  // Build grid cells: offset blanks + day cells.
   const cells: Array<{ blank: true } | { day: number; spend: string | null }> = [
     ...Array.from({ length: offset }, () => ({ blank: true as const })),
     ...Array.from({ length: days }, (_, i) => {
@@ -117,6 +120,8 @@ export function CalendarView() {
         )}
       </div>
 
+      <AccountSelector accounts={accounts} selectedIds={selectedAccountIds} onChange={onAccountsChange} />
+
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
@@ -124,21 +129,13 @@ export function CalendarView() {
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         {/* Month nav header */}
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
-          <button
-            onClick={prevMonth}
-            className="rounded-lg p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-            aria-label="Previous month"
-          >
+          <button onClick={prevMonth} className="rounded-lg p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors" aria-label="Previous month">
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           <span className="text-sm font-semibold text-gray-900">{label}</span>
-          <button
-            onClick={nextMonth}
-            className="rounded-lg p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-            aria-label="Next month"
-          >
+          <button onClick={nextMonth} className="rounded-lg p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors" aria-label="Next month">
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
@@ -148,9 +145,7 @@ export function CalendarView() {
         {/* Day-of-week headers */}
         <div className="grid grid-cols-7 border-b border-gray-100">
           {DAYS.map((d) => (
-            <div key={d} className="py-2 text-center text-xs font-semibold text-gray-400 uppercase tracking-wide">
-              {d}
-            </div>
+            <div key={d} className="py-2 text-center text-xs font-semibold text-gray-400 uppercase tracking-wide">{d}</div>
           ))}
         </div>
 
@@ -188,7 +183,6 @@ export function CalendarView() {
                       {fmt(spend)}
                     </span>
                   )}
-                  {/* Tooltip */}
                   {tooltip?.day === day && spend && (
                     <div className="absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1.5 text-xs text-white shadow-lg pointer-events-none">
                       €{fmtFull(spend)}

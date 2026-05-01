@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/manoskammas/finance-insights/apps/api/internal/domain"
 	"github.com/manoskammas/finance-insights/apps/api/internal/service"
@@ -12,7 +13,7 @@ import (
 
 // transactionLister is the subset of service.Transaction used by the handler.
 type transactionLister interface {
-	List(ctx context.Context, limit, offset int) (service.ListResult, error)
+	List(ctx context.Context, limit, offset int, accountIDs []string) (service.ListResult, error)
 }
 
 // Transaction serves transaction read endpoints.
@@ -57,7 +58,16 @@ func (h *Transaction) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.Service.List(r.Context(), limit, offset)
+	var accountIDs []string
+	if raw := r.URL.Query().Get("accountIds"); raw != "" {
+		for _, id := range strings.Split(raw, ",") {
+			if id = strings.TrimSpace(id); id != "" {
+				accountIDs = append(accountIDs, id)
+			}
+		}
+	}
+
+	result, err := h.Service.List(r.Context(), limit, offset, accountIDs)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list transactions")
 		return

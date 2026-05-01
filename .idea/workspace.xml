@@ -1,23 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
     <list default="true" id="1c19eb14-54ab-4504-b576-0d6fd89b5ed4" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/aead4f90-59b0-4dd5-b43d-f2302db2f705.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/aead4f90-59b0-4dd5-b43d-f2302db2f705/storage_v2/_src_/database/finance_insights.oE6ykQ.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/aead4f90-59b0-4dd5-b43d-f2302db2f705/storage_v2/_src_/database/finance_insights.oE6ykQ/schema/information_schema.FNRwLQ.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/aead4f90-59b0-4dd5-b43d-f2302db2f705/storage_v2/_src_/database/finance_insights.oE6ykQ/schema/pg_catalog.0S1ZNQ.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/aead4f90-59b0-4dd5-b43d-f2302db2f705/storage_v2/_src_/database/finance_insights.oE6ykQ/schema/public.abK9xQ.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.vscode/launch.json" beforeDir="false" afterPath="$PROJECT_DIR$/.vscode/launch.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/api/internal/domain/transaction.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/domain/transaction.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/ce2a54bc-edd4-4d07-b1d6-d2ac0fa3dd22.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/ce2a54bc-edd4-4d07-b1d6-d2ac0fa3dd22.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/ce2a54bc-edd4-4d07-b1d6-d2ac0fa3dd22/storage_v2/_src_/database/postgres.edMnLQ/schema/public.abK9xQ.meta" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/ce2a54bc-edd4-4d07-b1d6-d2ac0fa3dd22/storage_v2/_src_/database/postgres.edMnLQ/schema/public.abK9xQ.meta" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/data_sources_history.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/data_sources_history.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/api/cmd/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/cmd/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/api/internal/handler/report.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/handler/report.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/apps/api/internal/handler/transaction.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/handler/transaction.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/api/internal/handler/transaction_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/handler/transaction_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/api/internal/parsers/parser.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/parsers/parser.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/api/internal/parsers/piraeus/v1/parser.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/parsers/piraeus/v1/parser.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/api/internal/repository/account.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/repository/account.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/api/internal/repository/report.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/repository/report.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/apps/api/internal/repository/transaction.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/repository/transaction.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/api/internal/service/statement.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/service/statement.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/api/internal/service/statement_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/service/statement_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/api/internal/service/transaction_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/service/transaction_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pireaus-parser/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/pireaus-parser/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/api/internal/server/router.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/server/router.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/api/internal/service/report.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/service/report.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/api/internal/service/transaction.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/service/transaction.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/web/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/web/src/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/web/src/api/reports.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/web/src/api/reports.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/web/src/api/transactions.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/web/src/api/transactions.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/web/src/components/CalendarView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/web/src/components/CalendarView.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/web/src/components/ReportsView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/web/src/components/ReportsView.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/web/src/components/TransactionTable.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/web/src/components/TransactionTable.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -27,30 +35,30 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 8,
-  "fromUser": false
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 8,
+  &quot;fromUser&quot;: false
+}</component>
   <component name="ProjectId" id="3D0AcPfB9d4Yc8Y6Gt6tBDxhmoy" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "main",
-    "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "F:/2-1-git/finance-insights"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;F:/2-1-git/finance-insights&quot;
   },
-  "keyToStringList": {
-    "DatabaseDriversLRU": [
-      "postgresql"
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;postgresql&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="1c19eb14-54ab-4504-b576-0d6fd89b5ed4" name="Changes" comment="" />

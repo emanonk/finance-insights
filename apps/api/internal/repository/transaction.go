@@ -62,27 +62,40 @@ func (r *TransactionRepository) InsertBatch(
 }
 
 // List returns transactions ordered by date desc (then id desc) with pagination,
-// along with the total number of rows in the table.
-func (r *TransactionRepository) List(ctx context.Context, limit, offset int) ([]domain.Transaction, int, error) {
-	rows, err := r.pool.Query(ctx, `
-        SELECT
-            id,
-            account_id,
-            date,
-            bank_reference,
-            transaction_reference,
-            merchant_identifier,
-            balance_before,
-            balance_after,
-            amount,
-            direction,
-            raw_data,
-            statement_file_name,
-            COUNT(*) OVER() AS total
-        FROM transactions
-        ORDER BY date DESC, id DESC
-        LIMIT $1 OFFSET $2
-    `, limit, offset)
+// along with the total number of rows matching the filter.
+// When accountIDs is non-empty, only transactions belonging to those accounts are returned.
+func (r *TransactionRepository) List(ctx context.Context, limit, offset int, accountIDs []string) ([]domain.Transaction, int, error) {
+	var (
+		query string
+		args  []any
+	)
+
+	if len(accountIDs) > 0 {
+		query = `
+			SELECT
+				id, account_id, date, bank_reference, transaction_reference,
+				merchant_identifier, balance_before, balance_after, amount,
+				direction, raw_data, statement_file_name,
+				COUNT(*) OVER() AS total
+			FROM transactions
+			WHERE account_id = ANY($3)
+			ORDER BY date DESC, id DESC
+			LIMIT $1 OFFSET $2`
+		args = []any{limit, offset, accountIDs}
+	} else {
+		query = `
+			SELECT
+				id, account_id, date, bank_reference, transaction_reference,
+				merchant_identifier, balance_before, balance_after, amount,
+				direction, raw_data, statement_file_name,
+				COUNT(*) OVER() AS total
+			FROM transactions
+			ORDER BY date DESC, id DESC
+			LIMIT $1 OFFSET $2`
+		args = []any{limit, offset}
+	}
+
+	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("query transactions: %w", err)
 	}
@@ -118,7 +131,15 @@ func (r *TransactionRepository) List(ctx context.Context, limit, offset int) ([]
 	}
 
 	if out == nil {
-		if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM transactions`).Scan(&total); err != nil {
+		var countQuery string
+		var countArgs []any
+		if len(accountIDs) > 0 {
+			countQuery = `SELECT COUNT(*) FROM transactions WHERE account_id = ANY($1)`
+			countArgs = []any{accountIDs}
+		} else {
+			countQuery = `SELECT COUNT(*) FROM transactions`
+		}
+		if err := r.pool.QueryRow(ctx, countQuery, countArgs...).Scan(&total); err != nil {
 			return nil, 0, fmt.Errorf("count transactions: %w", err)
 		}
 	}

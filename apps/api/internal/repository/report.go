@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -19,9 +20,19 @@ func NewReportRepository(pool *pgxpool.Pool) *ReportRepository {
 	return &ReportRepository{pool: pool}
 }
 
+// accountFilter returns a WHERE fragment and args to optionally restrict to
+// specific account IDs. argOffset is the number of existing $N args.
+func accountFilter(accountIDs []string, argOffset int) (string, []any) {
+	if len(accountIDs) == 0 {
+		return "", nil
+	}
+	return fmt.Sprintf(" AND tx.account_id = ANY($%d)", argOffset+1), []any{accountIDs}
+}
+
 // SpendByPrimaryTag returns debit totals grouped by primary tag (merchants only).
-func (r *ReportRepository) SpendByPrimaryTag(ctx context.Context) ([]domain.TagSpend, error) {
-	rows, err := r.pool.Query(ctx, `
+func (r *ReportRepository) SpendByPrimaryTag(ctx context.Context, accountIDs []string) ([]domain.TagSpend, error) {
+	filter, extra := accountFilter(accountIDs, 0)
+	query := `
 		SELECT
 			tg.name,
 			SUM(tx.amount)::text,
@@ -29,10 +40,11 @@ func (r *ReportRepository) SpendByPrimaryTag(ctx context.Context) ([]domain.TagS
 		FROM transactions tx
 		JOIN merchants m   ON m.identifier_name = tx.merchant_identifier
 		JOIN tags      tg  ON tg.id = m.primary_tag_id
-		WHERE tx.direction = 'debit'
+		WHERE tx.direction = 'debit'` + filter + `
 		GROUP BY tg.name
-		ORDER BY SUM(tx.amount) DESC
-	`)
+		ORDER BY SUM(tx.amount) DESC`
+
+	rows, err := r.pool.Query(ctx, query, extra...)
 	if err != nil {
 		return nil, fmt.Errorf("spend by primary tag: %w", err)
 	}
@@ -50,8 +62,9 @@ func (r *ReportRepository) SpendByPrimaryTag(ctx context.Context) ([]domain.TagS
 }
 
 // SpendBySecondaryTag returns debit totals grouped by secondary tag.
-func (r *ReportRepository) SpendBySecondaryTag(ctx context.Context) ([]domain.TagSpend, error) {
-	rows, err := r.pool.Query(ctx, `
+func (r *ReportRepository) SpendBySecondaryTag(ctx context.Context, accountIDs []string) ([]domain.TagSpend, error) {
+	filter, extra := accountFilter(accountIDs, 0)
+	query := `
 		SELECT
 			tg.name,
 			SUM(tx.amount)::text,
@@ -60,10 +73,11 @@ func (r *ReportRepository) SpendBySecondaryTag(ctx context.Context) ([]domain.Ta
 		JOIN merchants              m   ON m.identifier_name = tx.merchant_identifier
 		JOIN merchant_secondary_tags mst ON mst.merchant_id = m.id
 		JOIN tags                   tg  ON tg.id = mst.tag_id
-		WHERE tx.direction = 'debit'
+		WHERE tx.direction = 'debit'` + filter + `
 		GROUP BY tg.name
-		ORDER BY SUM(tx.amount) DESC
-	`)
+		ORDER BY SUM(tx.amount) DESC`
+
+	rows, err := r.pool.Query(ctx, query, extra...)
 	if err != nil {
 		return nil, fmt.Errorf("spend by secondary tag: %w", err)
 	}
@@ -81,14 +95,18 @@ func (r *ReportRepository) SpendBySecondaryTag(ctx context.Context) ([]domain.Ta
 }
 
 // DailySpend returns total debit spending per calendar day.
-func (r *ReportRepository) DailySpend(ctx context.Context) ([]domain.DailySpend, error) {
-	rows, err := r.pool.Query(ctx, `
+func (r *ReportRepository) DailySpend(ctx context.Context, accountIDs []string) ([]domain.DailySpend, error) {
+	filter, extra := accountFilter(accountIDs, 0)
+	// DailySpend doesn't join merchants, so we need a bare tx alias.
+	bareFilter := strings.ReplaceAll(filter, "tx.account_id", "account_id")
+	query := `
 		SELECT date::text, SUM(amount)::text
 		FROM transactions
-		WHERE direction = 'debit'
+		WHERE direction = 'debit'` + bareFilter + `
 		GROUP BY date
-		ORDER BY date
-	`)
+		ORDER BY date`
+
+	rows, err := r.pool.Query(ctx, query, extra...)
 	if err != nil {
 		return nil, fmt.Errorf("daily spend: %w", err)
 	}
@@ -107,8 +125,9 @@ func (r *ReportRepository) DailySpend(ctx context.Context) ([]domain.DailySpend,
 
 // MerchantsByMonth returns per-month aggregates for every known merchant identifier.
 // Results are ordered by merchant identifier then month ascending.
-func (r *ReportRepository) MerchantsByMonth(ctx context.Context) ([]domain.MerchantMonthRow, error) {
-	rows, err := r.pool.Query(ctx, `
+func (r *ReportRepository) MerchantsByMonth(ctx context.Context, accountIDs []string) ([]domain.MerchantMonthRow, error) {
+	filter, extra := accountFilter(accountIDs, 0)
+	query := `
 		SELECT
 			tx.merchant_identifier,
 			to_char(tx.date, 'YYYY-MM')       AS month,
@@ -118,10 +137,11 @@ func (r *ReportRepository) MerchantsByMonth(ctx context.Context) ([]domain.Merch
 			COUNT(*)::int                     AS tx_count
 		FROM transactions tx
 		WHERE tx.direction = 'debit'
-		  AND tx.merchant_identifier IS NOT NULL
+		  AND tx.merchant_identifier IS NOT NULL` + filter + `
 		GROUP BY tx.merchant_identifier, to_char(tx.date, 'YYYY-MM')
-		ORDER BY tx.merchant_identifier, month
-	`)
+		ORDER BY tx.merchant_identifier, month`
+
+	rows, err := r.pool.Query(ctx, query, extra...)
 	if err != nil {
 		return nil, fmt.Errorf("merchants by month: %w", err)
 	}

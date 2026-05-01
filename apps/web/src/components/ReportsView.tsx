@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   getSpendByPrimaryTag,
   getSpendBySecondaryTag,
@@ -6,11 +6,12 @@ import {
   type TagSpend,
   type MerchantSummary,
 } from "../api/reports";
+import { type Account } from "../api/accounts";
+import { AccountSelector } from "./AccountSelector";
 import { penceToPounds } from "../lib/money";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-// fmt formats a pence string value as a pounds display string.
 function fmt(value: string): string {
   return penceToPounds(value);
 }
@@ -26,9 +27,7 @@ function Skeleton() {
 }
 
 function EmptyState({ label }: { label: string }) {
-  return (
-    <p className="py-10 text-center text-sm text-gray-400">{label}</p>
-  );
+  return <p className="py-10 text-center text-sm text-gray-400">{label}</p>;
 }
 
 function SectionError({ message }: { message: string }) {
@@ -52,21 +51,14 @@ function TagSpendList({ items }: { items: TagSpend[] }) {
         const pct = max > 0 ? ((parseFloat(item.total) || 0) / max) * 100 : 0;
         return (
           <div key={item.tagName} className="flex items-center gap-3">
-            <span className="w-32 shrink-0 truncate text-sm font-medium text-gray-700">
-              {item.tagName}
-            </span>
+            <span className="w-32 shrink-0 truncate text-sm font-medium text-gray-700">{item.tagName}</span>
             <div className="relative flex-1 h-7 rounded-md bg-gray-100 overflow-hidden">
-              <div
-                className="absolute inset-y-0 left-0 rounded-md bg-indigo-500 transition-all"
-                style={{ width: `${pct}%` }}
-              />
+              <div className="absolute inset-y-0 left-0 rounded-md bg-indigo-500 transition-all" style={{ width: `${pct}%` }} />
               <span className="absolute inset-y-0 right-2 flex items-center text-xs font-semibold text-gray-700">
                 €{fmt(item.total)}
               </span>
             </div>
-            <span className="w-14 shrink-0 text-right text-xs text-gray-400 tabular-nums">
-              {item.count}×
-            </span>
+            <span className="w-14 shrink-0 text-right text-xs text-gray-400 tabular-nums">{item.count}×</span>
           </div>
         );
       })}
@@ -81,12 +73,9 @@ function MerchantsByMonthTable({ items }: { items: MerchantSummary[] }) {
 
   if (items.length === 0) return <EmptyState label="No merchant data yet." />;
 
-  // Collect all unique months across all merchants (sorted).
   const allMonths = Array.from(
     new Set(items.flatMap((m) => m.months.map((mo) => mo.month)))
   ).sort();
-
-  // Show at most the 8 most recent months in the summary row.
   const displayMonths = allMonths.slice(-8);
 
   return (
@@ -94,31 +83,18 @@ function MerchantsByMonthTable({ items }: { items: MerchantSummary[] }) {
       <table className="min-w-full text-sm">
         <thead className="bg-gray-50 border-b border-gray-200">
           <tr>
-            <th className="sticky left-0 z-10 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 min-w-40">
-              Merchant
-            </th>
-            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Total
-            </th>
-            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Txs
-            </th>
+            <th className="sticky left-0 z-10 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 min-w-40">Merchant</th>
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Total</th>
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Txs</th>
             {displayMonths.map((m) => (
-              <th
-                key={m}
-                className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap"
-              >
-                {m}
-              </th>
+              <th key={m} className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">{m}</th>
             ))}
             <th className="w-8" />
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
           {items.map((merchant) => {
-            const monthMap = Object.fromEntries(
-              merchant.months.map((mo) => [mo.month, mo])
-            );
+            const monthMap = Object.fromEntries(merchant.months.map((mo) => [mo.month, mo]));
             const isOpen = expanded === merchant.identifier;
 
             return (
@@ -126,38 +102,21 @@ function MerchantsByMonthTable({ items }: { items: MerchantSummary[] }) {
                 <tr
                   key={merchant.identifier}
                   className="hover:bg-gray-50 cursor-pointer transition-colors"
-                  onClick={() =>
-                    setExpanded(isOpen ? null : merchant.identifier)
-                  }
+                  onClick={() => setExpanded(isOpen ? null : merchant.identifier)}
                 >
-                  <td className="sticky left-0 bg-white px-4 py-3 font-medium text-gray-800 font-mono text-xs whitespace-nowrap">
-                    {merchant.identifier}
-                  </td>
-                  <td className="px-4 py-3 text-right font-semibold text-gray-800 tabular-nums whitespace-nowrap">
-                    €{fmt(merchant.totalSpend)}
-                  </td>
-                  <td className="px-4 py-3 text-right text-gray-500 tabular-nums">
-                    {merchant.txCount}
-                  </td>
+                  <td className="sticky left-0 bg-white px-4 py-3 font-medium text-gray-800 font-mono text-xs whitespace-nowrap">{merchant.identifier}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-gray-800 tabular-nums whitespace-nowrap">€{fmt(merchant.totalSpend)}</td>
+                  <td className="px-4 py-3 text-right text-gray-500 tabular-nums">{merchant.txCount}</td>
                   {displayMonths.map((m) => {
                     const mo = monthMap[m];
                     return (
-                      <td
-                        key={m}
-                        className="px-3 py-3 text-right text-gray-600 tabular-nums whitespace-nowrap"
-                      >
+                      <td key={m} className="px-3 py-3 text-right text-gray-600 tabular-nums whitespace-nowrap">
                         {mo ? `€${fmt(mo.total)}` : "—"}
                       </td>
                     );
                   })}
                   <td className="px-3 py-3 text-gray-300">
-                    <svg
-                      className={`h-4 w-4 transition-transform ${isOpen ? "rotate-90" : ""}`}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
+                    <svg className={`h-4 w-4 transition-transform ${isOpen ? "rotate-90" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   </td>
@@ -165,10 +124,7 @@ function MerchantsByMonthTable({ items }: { items: MerchantSummary[] }) {
 
                 {isOpen && (
                   <tr key={`${merchant.identifier}-detail`}>
-                    <td
-                      colSpan={4 + displayMonths.length}
-                      className="bg-indigo-50 px-4 py-4"
-                    >
+                    <td colSpan={4 + displayMonths.length} className="bg-indigo-50 px-4 py-4">
                       <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-indigo-600">
                         Monthly breakdown — {merchant.identifier}
                       </p>
@@ -230,89 +186,69 @@ interface ReportState<T> {
   error: string | null;
 }
 
-function useReport<T>(fetcher: () => Promise<T>): ReportState<T> {
-  const [state, setState] = useState<ReportState<T>>({
-    data: null,
-    loading: true,
-    error: null,
-  });
-
-  const load = useCallback(async () => {
-    setState({ data: null, loading: true, error: null });
-    try {
-      const data = await fetcher();
-      setState({ data, loading: false, error: null });
-    } catch (err) {
-      setState({
-        data: null,
-        loading: false,
-        error: err instanceof Error ? err.message : "Unexpected error",
-      });
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => { load(); }, [load]);
-
-  return state;
+interface ReportsViewProps {
+  accounts: Account[];
+  selectedAccountIds: string[];
+  onAccountsChange: (ids: string[]) => void;
 }
 
-export function ReportsView() {
-  const primary = useReport(getSpendByPrimaryTag);
-  const secondary = useReport(getSpendBySecondaryTag);
-  const merchants = useReport(getMerchantsByMonth);
+export function ReportsView({ accounts, selectedAccountIds, onAccountsChange }: ReportsViewProps) {
+  const accountIds = selectedAccountIds.length > 0 ? selectedAccountIds : undefined;
+  const filterKey = selectedAccountIds.join(",");
+
+  const [primary, setPrimary] = useState<ReportState<{ items: TagSpend[] }>>({ data: null, loading: true, error: null });
+  const [secondary, setSecondary] = useState<ReportState<{ items: TagSpend[] }>>({ data: null, loading: true, error: null });
+  const [merchantsState, setMerchantsState] = useState<ReportState<{ items: MerchantSummary[] }>>({ data: null, loading: true, error: null });
+
+  useEffect(() => {
+    setPrimary({ data: null, loading: true, error: null });
+    getSpendByPrimaryTag(accountIds)
+      .then((data) => setPrimary({ data, loading: false, error: null }))
+      .catch((err) => setPrimary({ data: null, loading: false, error: err instanceof Error ? err.message : "Unexpected error" }));
+  }, [filterKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setSecondary({ data: null, loading: true, error: null });
+    getSpendBySecondaryTag(accountIds)
+      .then((data) => setSecondary({ data, loading: false, error: null }))
+      .catch((err) => setSecondary({ data: null, loading: false, error: err instanceof Error ? err.message : "Unexpected error" }));
+  }, [filterKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setMerchantsState({ data: null, loading: true, error: null });
+    getMerchantsByMonth(accountIds)
+      .then((data) => setMerchantsState({ data, loading: false, error: null }))
+      .catch((err) => setMerchantsState({ data: null, loading: false, error: err instanceof Error ? err.message : "Unexpected error" }));
+  }, [filterKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-10">
       <div>
         <h2 className="text-xl font-semibold text-gray-900">Reports</h2>
-        <p className="mt-0.5 text-sm text-gray-500">
-          Aggregated spending analysis across your transactions.
-        </p>
+        <p className="mt-0.5 text-sm text-gray-500">Aggregated spending analysis across your transactions.</p>
       </div>
 
-      {/* Spending by primary tag */}
-      <Section
-        title="Spending by primary tag"
-        subtitle="Total debit amount for each primary tag (only tagged merchants)."
-      >
+      <AccountSelector accounts={accounts} selectedIds={selectedAccountIds} onChange={onAccountsChange} />
+
+      <Section title="Spending by primary tag" subtitle="Total debit amount for each primary tag (only tagged merchants).">
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm px-5 py-5">
-          {primary.loading ? (
-            <Skeleton />
-          ) : primary.error ? (
-            <SectionError message={primary.error} />
-          ) : (
+          {primary.loading ? <Skeleton /> : primary.error ? <SectionError message={primary.error} /> : (
             <TagSpendList items={primary.data?.items ?? []} />
           )}
         </div>
       </Section>
 
-      {/* Spending by secondary tag */}
-      <Section
-        title="Spending by secondary tag"
-        subtitle="Total debit amount broken down by secondary classification."
-      >
+      <Section title="Spending by secondary tag" subtitle="Total debit amount broken down by secondary classification.">
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm px-5 py-5">
-          {secondary.loading ? (
-            <Skeleton />
-          ) : secondary.error ? (
-            <SectionError message={secondary.error} />
-          ) : (
+          {secondary.loading ? <Skeleton /> : secondary.error ? <SectionError message={secondary.error} /> : (
             <TagSpendList items={secondary.data?.items ?? []} />
           )}
         </div>
       </Section>
 
-      {/* Top merchants by month */}
-      <Section
-        title="Merchants by month"
-        subtitle="Monthly spend per merchant, sorted by total. Click a row to see max and average per month."
-      >
-        {merchants.loading ? (
-          <Skeleton />
-        ) : merchants.error ? (
-          <SectionError message={merchants.error} />
-        ) : (
-          <MerchantsByMonthTable items={merchants.data?.items ?? []} />
+      <Section title="Merchants by month" subtitle="Monthly spend per merchant, sorted by total. Click a row to see max and average per month.">
+        {merchantsState.loading ? <Skeleton /> : merchantsState.error ? <SectionError message={merchantsState.error} /> : (
+          <MerchantsByMonthTable items={merchantsState.data?.items ?? []} />
         )}
       </Section>
     </div>

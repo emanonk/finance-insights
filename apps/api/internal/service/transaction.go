@@ -14,7 +14,7 @@ const (
 
 // transactionReader is the subset of the transaction repository used by the service.
 type transactionReader interface {
-	List(ctx context.Context, limit, offset int) ([]domain.Transaction, int, error)
+	List(ctx context.Context, limit, offset int, accountIDs []string) ([]domain.Transaction, int, error)
 }
 
 // Transaction serves read-side transaction queries.
@@ -35,15 +35,15 @@ type ListResult struct {
 	Offset int
 }
 
-// List returns the page of transactions indicated by limit/offset.
-// Callers may pass 0 or negative values; they are clamped to safe defaults.
-func (s *Transaction) List(ctx context.Context, limit, offset int) (ListResult, error) {
+// List returns the page of transactions indicated by limit/offset, optionally
+// filtered to the given account IDs (empty slice = no filter).
+func (s *Transaction) List(ctx context.Context, limit, offset int, accountIDs []string) (ListResult, error) {
 	limit = clampLimit(limit)
 	if offset < 0 {
 		offset = 0
 	}
 
-	items, total, err := s.repo.List(ctx, limit, offset)
+	items, total, err := s.repo.List(ctx, limit, offset, accountIDs)
 	if err != nil {
 		return ListResult{}, fmt.Errorf("list transactions: %w", err)
 	}

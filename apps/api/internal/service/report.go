@@ -8,10 +8,10 @@ import (
 )
 
 type reportStore interface {
-	SpendByPrimaryTag(ctx context.Context) ([]domain.TagSpend, error)
-	SpendBySecondaryTag(ctx context.Context) ([]domain.TagSpend, error)
-	MerchantsByMonth(ctx context.Context) ([]domain.MerchantMonthRow, error)
-	DailySpend(ctx context.Context) ([]domain.DailySpend, error)
+	SpendByPrimaryTag(ctx context.Context, accountIDs []string) ([]domain.TagSpend, error)
+	SpendBySecondaryTag(ctx context.Context, accountIDs []string) ([]domain.TagSpend, error)
+	MerchantsByMonth(ctx context.Context, accountIDs []string) ([]domain.MerchantMonthRow, error)
+	DailySpend(ctx context.Context, accountIDs []string) ([]domain.DailySpend, error)
 }
 
 // Report serves aggregate report queries.
@@ -25,8 +25,8 @@ func NewReport(repo reportStore) *Report {
 }
 
 // SpendByPrimaryTag returns debit totals by primary tag, descending by total.
-func (s *Report) SpendByPrimaryTag(ctx context.Context) ([]domain.TagSpend, error) {
-	rows, err := s.repo.SpendByPrimaryTag(ctx)
+func (s *Report) SpendByPrimaryTag(ctx context.Context, accountIDs []string) ([]domain.TagSpend, error) {
+	rows, err := s.repo.SpendByPrimaryTag(ctx, accountIDs)
 	if err != nil {
 		return nil, fmt.Errorf("spend by primary tag: %w", err)
 	}
@@ -34,8 +34,8 @@ func (s *Report) SpendByPrimaryTag(ctx context.Context) ([]domain.TagSpend, erro
 }
 
 // SpendBySecondaryTag returns debit totals by secondary tag, descending by total.
-func (s *Report) SpendBySecondaryTag(ctx context.Context) ([]domain.TagSpend, error) {
-	rows, err := s.repo.SpendBySecondaryTag(ctx)
+func (s *Report) SpendBySecondaryTag(ctx context.Context, accountIDs []string) ([]domain.TagSpend, error) {
+	rows, err := s.repo.SpendBySecondaryTag(ctx, accountIDs)
 	if err != nil {
 		return nil, fmt.Errorf("spend by secondary tag: %w", err)
 	}
@@ -60,8 +60,8 @@ type MerchantSummary struct {
 }
 
 // DailySpend returns total debit spending per calendar day.
-func (s *Report) DailySpend(ctx context.Context) ([]domain.DailySpend, error) {
-	rows, err := s.repo.DailySpend(ctx)
+func (s *Report) DailySpend(ctx context.Context, accountIDs []string) ([]domain.DailySpend, error) {
+	rows, err := s.repo.DailySpend(ctx, accountIDs)
 	if err != nil {
 		return nil, fmt.Errorf("daily spend: %w", err)
 	}
@@ -70,8 +70,8 @@ func (s *Report) DailySpend(ctx context.Context) ([]domain.DailySpend, error) {
 
 // MerchantsByMonth returns per-merchant monthly aggregates, ordered by total
 // spend descending so the highest-spending merchants come first.
-func (s *Report) MerchantsByMonth(ctx context.Context) ([]MerchantSummary, error) {
-	flat, err := s.repo.MerchantsByMonth(ctx)
+func (s *Report) MerchantsByMonth(ctx context.Context, accountIDs []string) ([]MerchantSummary, error) {
+	flat, err := s.repo.MerchantsByMonth(ctx, accountIDs)
 	if err != nil {
 		return nil, fmt.Errorf("merchants by month: %w", err)
 	}

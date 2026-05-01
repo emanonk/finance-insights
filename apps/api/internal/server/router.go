@@ -11,6 +11,7 @@ import (
 type Deps struct {
 	System      *service.System
 	Statement   *service.Statement
+	Account     *service.Account
 	Transaction *service.Transaction
 	Merchant    *service.Merchant
 	Report      *service.Report
@@ -25,6 +26,9 @@ func NewRouter(d Deps) http.Handler {
 
 	statement := &handler.Statement{Service: d.Statement}
 	mux.HandleFunc("POST /statements", statement.Create)
+
+	account := &handler.Account{Service: d.Account}
+	mux.HandleFunc("GET /accounts", account.List)
 
 	transaction := &handler.Transaction{Service: d.Transaction}
 	mux.HandleFunc("GET /transactions", transaction.List)

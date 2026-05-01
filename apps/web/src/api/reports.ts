@@ -27,20 +27,25 @@ export interface MerchantsByMonthResponse {
   items: MerchantSummary[];
 }
 
-export async function getSpendByPrimaryTag(): Promise<TagSpendResponse> {
-  const res = await fetch("/api/reports/spend-by-primary-tag");
+function accountParam(accountIds?: string[]): string {
+  if (!accountIds || accountIds.length === 0) return "";
+  return `?accountIds=${accountIds.join(",")}`;
+}
+
+export async function getSpendByPrimaryTag(accountIds?: string[]): Promise<TagSpendResponse> {
+  const res = await fetch(`/api/reports/spend-by-primary-tag${accountParam(accountIds)}`);
   if (!res.ok) throw new Error(`Failed to load primary tag report: ${res.status}`);
   return res.json() as Promise<TagSpendResponse>;
 }
 
-export async function getSpendBySecondaryTag(): Promise<TagSpendResponse> {
-  const res = await fetch("/api/reports/spend-by-secondary-tag");
+export async function getSpendBySecondaryTag(accountIds?: string[]): Promise<TagSpendResponse> {
+  const res = await fetch(`/api/reports/spend-by-secondary-tag${accountParam(accountIds)}`);
   if (!res.ok) throw new Error(`Failed to load secondary tag report: ${res.status}`);
   return res.json() as Promise<TagSpendResponse>;
 }
 
-export async function getMerchantsByMonth(): Promise<MerchantsByMonthResponse> {
-  const res = await fetch("/api/reports/merchants-by-month");
+export async function getMerchantsByMonth(accountIds?: string[]): Promise<MerchantsByMonthResponse> {
+  const res = await fetch(`/api/reports/merchants-by-month${accountParam(accountIds)}`);
   if (!res.ok) throw new Error(`Failed to load merchants report: ${res.status}`);
   return res.json() as Promise<MerchantsByMonthResponse>;
 }
@@ -54,8 +59,8 @@ export interface DailySpendResponse {
   items: DailySpend[];
 }
 
-export async function getDailySpend(): Promise<DailySpendResponse> {
-  const res = await fetch("/api/reports/daily-spend");
+export async function getDailySpend(accountIds?: string[]): Promise<DailySpendResponse> {
+  const res = await fetch(`/api/reports/daily-spend${accountParam(accountIds)}`);
   if (!res.ok) throw new Error(`Failed to load daily spend: ${res.status}`);
   return res.json() as Promise<DailySpendResponse>;
 }
