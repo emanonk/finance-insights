@@ -5,27 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="1c19eb14-54ab-4504-b576-0d6fd89b5ed4" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/ce2a54bc-edd4-4d07-b1d6-d2ac0fa3dd22.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/ce2a54bc-edd4-4d07-b1d6-d2ac0fa3dd22.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/ce2a54bc-edd4-4d07-b1d6-d2ac0fa3dd22/storage_v2/_src_/database/postgres.edMnLQ/schema/public.abK9xQ.meta" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/ce2a54bc-edd4-4d07-b1d6-d2ac0fa3dd22/storage_v2/_src_/database/postgres.edMnLQ/schema/public.abK9xQ.meta" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/data_sources_history.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/data_sources_history.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/api/cmd/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/cmd/main.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/api/internal/handler/report.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/handler/report.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/api/internal/handler/transaction.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/handler/transaction.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/api/internal/repository/account.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/repository/account.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/api/internal/repository/report.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/repository/report.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.vscode/launch.json" beforeDir="false" afterPath="$PROJECT_DIR$/.vscode/launch.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/apps/api/internal/repository/transaction.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/repository/transaction.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/api/internal/server/router.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/server/router.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/api/internal/service/report.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/service/report.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/api/internal/service/transaction.go" beforeDir="false" afterPath="$PROJECT_DIR$/apps/api/internal/service/transaction.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/web/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/web/src/App.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/web/src/api/reports.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/web/src/api/reports.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/web/src/api/transactions.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/web/src/api/transactions.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/web/src/components/CalendarView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/web/src/components/CalendarView.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/web/src/components/ReportsView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/web/src/components/ReportsView.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/web/src/components/TransactionTable.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/web/src/components/TransactionTable.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pireaus-parser/go.mod" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pireaus-parser/go.sum" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pireaus-parser/main.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pireaus-parser/v1/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/pireaus-parser/v1/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pireaus-parser/v1/main1.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pireaus-parser/v1/main2.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/todo.md" beforeDir="false" afterPath="$PROJECT_DIR$/todo.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

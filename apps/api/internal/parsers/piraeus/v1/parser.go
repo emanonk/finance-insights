@@ -86,6 +86,11 @@ func (p *Parser) Parse(pdfPath string) ([]parsers.ParsedTransaction, error) {
 	}
 	accountNumber := reAccountNumber.FindString(headerLines[12])
 
+	previousBalance := headerLines[30]
+
+	previousBal, _ := toCents(previousBalance)
+	fmt.Printf("Previous balance raw: %d\n", previousBal)
+
 	var parsed []parsers.ParsedTransaction
 	var previousDate time.Time
 	var previousBalanceAfter int
@@ -108,6 +113,15 @@ func (p *Parser) Parse(pdfPath string) ([]parsers.ParsedTransaction, error) {
 			} else {
 				tx.Direction = "credit"
 				tx.Amount = tx.BalanceAfter - previousBalanceAfter
+			}
+		} else {
+			tx.BalanceBefore = previousBal
+			if tx.BalanceAfter < previousBal {
+				tx.Direction = "debit"
+				tx.Amount = previousBal - tx.BalanceAfter
+			} else {
+				tx.Direction = "credit"
+				tx.Amount = tx.BalanceAfter - previousBal
 			}
 		}
 
@@ -176,6 +190,28 @@ func isDate(value string) bool {
 func parseDate(value string) time.Time {
 	t, _ := time.Parse("02/01/06", value)
 	return t
+}
+
+func toCents(input string) (int, error) {
+	// 1. Remove everything except digits, comma, dot
+	re := regexp.MustCompile(`[^\d,\.]`)
+	clean := re.ReplaceAllString(input, "")
+
+	// 2. Remove spaces (just in case)
+	clean = strings.ReplaceAll(clean, " ", "")
+
+	// 3. Handle formats like "13,836.28"
+	// remove thousands separator
+	clean = strings.ReplaceAll(clean, ",", "")
+
+	// 4. Convert to float
+	f, err := strconv.ParseFloat(clean, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	// 5. Convert to cents
+	return int(f * 100), nil
 }
 
 func parseAmount(value string) int {

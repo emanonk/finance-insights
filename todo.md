@@ -1,4 +1,4 @@
-- at insertion create a constrain at transaction account_id date, bank_reference, transaction_reference, merchant_identifier, amount. and if the transaction is a duplicate just ignore it.
+- DONE - at insertion create a constrain at transaction account_id, date, bank_reference, transaction_reference, merchant_identifier, amount. and if the transaction is a duplicate just ignore it.
 - i want to be able to see reports per year. this is what help the user to see what is spending for one year and then divided by 12 to see the month spending. also show a report with total month spending. i want to see for example if in june i spend more because of the ice creams. well i dont care where i spend it. just how much.
 - default primary tag for transactions with merchant without tags is "others". so we can say every merchant should have a default tag as "others".
 - new report. total credit of the year, total debit of the year. is the year positive or negative.
@@ -8,3 +8,7 @@
 - where are the original statements stored? i want them to be organised
 - also store the statement page and row for each transaction and show it when expand the transaction so i can find it easier in the statement.
 - in the add tags show a list of existing tags (primary and secondary), in case the user want to use an existing one. also have an expansion of ideas of tags. chech chatgpt for the proposed tags
+- user can tag a transaction as savings. like a payment to trading212..
+- Insights is the biggest selling point. like you spend 20% more than last year.
+- house ownership. like goal to save 80K for deposit. you will achive it in 5 years.
+- search and display transaction over Amount: field

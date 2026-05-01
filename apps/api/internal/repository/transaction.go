@@ -21,6 +21,7 @@ func NewTransactionRepository(pool *pgxpool.Pool) *TransactionRepository {
 }
 
 // InsertBatch bulk-inserts the given transactions inside the supplied pg transaction.
+// Duplicate rows (matched by the transactions_dedup_idx unique index) are silently ignored.
 // The database generates the id for each row automatically.
 func (r *TransactionRepository) InsertBatch(
 	ctx context.Context,
@@ -31,15 +32,19 @@ func (r *TransactionRepository) InsertBatch(
 		return nil
 	}
 
-	columns := []string{
-		"account_id", "date", "bank_reference", "transaction_reference",
-		"merchant_identifier", "balance_before", "balance_after",
-		"amount", "direction", "raw_data", "statement_file_name",
-	}
+	const query = `
+		INSERT INTO transactions (
+			account_id, date, bank_reference, transaction_reference,
+			merchant_identifier, balance_before, balance_after,
+			amount, direction, raw_data, statement_file_name
+		) VALUES (
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+		)
+		ON CONFLICT ON CONSTRAINT transactions_dedup_idx DO NOTHING`
 
-	rows := make([][]any, len(txs))
-	for i, t := range txs {
-		rows[i] = []any{
+	batch := &pgx.Batch{}
+	for _, t := range txs {
+		batch.Queue(query,
 			t.AccountID,
 			t.Date,
 			t.BankReference,
@@ -51,12 +56,16 @@ func (r *TransactionRepository) InsertBatch(
 			t.Direction,
 			t.RawData,
 			t.StatementFileName,
-		}
+		)
 	}
 
-	_, err := tx.CopyFrom(ctx, pgx.Identifier{"transactions"}, columns, pgx.CopyFromRows(rows))
-	if err != nil {
-		return fmt.Errorf("copy transactions: %w", err)
+	results := tx.SendBatch(ctx, batch)
+	defer results.Close()
+
+	for range txs {
+		if _, err := results.Exec(); err != nil {
+			return fmt.Errorf("insert transaction: %w", err)
+		}
 	}
 	return nil
 }
